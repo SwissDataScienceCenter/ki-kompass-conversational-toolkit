@@ -1,6 +1,37 @@
+[project]
+name = "ki-kompass"
+version = "0.1.0"
+description = "KI-Kompass conversational toolkit and RAG workshop notebooks"
+requires-python = ">=3.12"
+dependencies = [
+    "conversational-toolkit",
+    "ki-kompass-rag",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.0",
+    "jupyterlab>=4.6.6",
+    "langchain-openai>=1.0",
+    "pre-commit>=4.0",
+    "pytest>=8.4.1",
+    "python-dotenv>=1.0",
+    "ruff>=0.12.3,<0.13",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["conversational-toolkit", "backend"]
+
+[tool.uv.sources]
+conversational-toolkit = { workspace = true }
+ki-kompass-rag = { workspace = true }
+
 [tool.ruff]
 extend-include = ["*.ipynb"]
-target-version = "py311"
+target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]

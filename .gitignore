@@ -36,3 +36,6 @@ images_unstructured_pdf/
 
 node_modules/
 .next/
+
+# uv
+.venv/

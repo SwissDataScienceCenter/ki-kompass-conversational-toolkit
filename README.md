@@ -18,24 +18,16 @@ The RAG assistant should **cite sources explicitly**, **separate facts from clai
 
 ## Installation
 
-Requires Python version >=3.12
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) (it installs Python 3.12+ and all dependencies for you).
 
 ```bash
-# Create and activate a virtual environment
-python -m venv rag_venv
-source rag_venv/bin/activate  # on Windows: rag_venv\Scripts\activate
-
-# Install requirements
-pip install --upgrade pip
-pip install -r requirements.txt
+# Create .venv and install everything (toolkit, backend, notebook tools) from uv.lock
+uv sync
 ```
 
-The `conversational_toolkit` and `backend` packages are installed automatically via `requirements.txt`. If needed, install them manually:
+The `conversational_toolkit` and `ki_kompass_rag` packages are installed into `.venv` as editable workspace members. Run commands with `uv run ...`, or activate the environment with `source .venv/bin/activate` (on Windows: `.venv\Scripts\activate`).
 
-```bash
-pip install -e conversational-toolkit/
-pip install -e backend/
-```
+To add or update a dependency, edit the relevant `pyproject.toml` and run `uv lock` followed by `uv sync`.
 
 ### Ollama (local LLM)
 
@@ -68,10 +60,10 @@ The server must be running whenever you use `BACKEND=ollama`. On macOS the deskt
 
 ## Running the Notebooks (JupyterLab)
 
-The workshop notebooks require JupyterLab. You can run them in an IDE or start it from the project root after activating your virtual environment:
+The workshop notebooks require JupyterLab. You can run them in an IDE or start it from the project root with uv:
 
 ```bash
-jupyter lab
+uv run jupyter lab
 ```
 
 JupyterLab opens in your browser at `http://localhost:8888`. Navigate to `backend/notebooks/english/` in the file browser on the left and open `T01_baseline_rag.ipynb` to start.
@@ -82,7 +74,7 @@ JupyterLab opens in your browser at `http://localhost:8888`. Navigate to `backen
 
 ```bash
 export OPENAI_API_KEY="sk-..."
-jupyter lab
+uv run jupyter lab
 ```
 
 ---
@@ -98,9 +90,7 @@ This launches the FastAPI backend and the Next.js chat frontend together.
 **Step 1: Install Python dependencies** (skip if already done)
 
 ```bash
-python -m venv rag_venv
-source rag_venv/bin/activate  # on Windows: rag_venv\Scripts\activate
-pip install -r requirements.txt
+uv sync
 ```
 
 **Step 2: Create vector store**
@@ -135,10 +125,10 @@ Without the Makefile:
 
 ```bash
 # OpenAI
-BACKEND=openai python -m ki_kompass_rag.main
+BACKEND=openai uv run python -m ki_kompass_rag.main
 
 # Ollama (requires `ollama serve` and a pulled model)
-BACKEND=ollama python -m ki_kompass_rag.main
+BACKEND=ollama uv run python -m ki_kompass_rag.main
 ```
 
 The server starts at `http://localhost:8080`.
@@ -167,7 +157,7 @@ jupyter lab
 ### Single query from the command line
 
 ```bash
-BACKEND=openai python -m ki_kompass_rag.baseline_rag
+BACKEND=openai uv run python -m ki_kompass_rag.baseline_rag
 BACKEND=openai QUERY="Which tape products have a verified EPD?" python -m ki_kompass_rag.baseline_rag
 BACKEND=openai RESET_VS=1 python -m ki_kompass_rag.baseline_rag  # rebuild vector store
 ```
@@ -364,10 +354,10 @@ Supplier-provided specs, datasheets, and article documents. Naming: `SPEC_{categ
 
 | Backend | Command | Notes |
 |-----|-----|-----|
-| Ollama | `BACKEND=ollama python -m ki_kompass_rag.baseline_rag` | Requires `ollama serve` and `ollama pull mistral-nemo:12b` |
-| OpenAI  | `BACKEND=openai python -m ...` | Requires `OPENAI_API_KEY` env var or `/secrets/OPENAI_API_KEY` file |
+| Ollama | `BACKEND=ollama uv run python -m ki_kompass_rag.baseline_rag` | Requires `ollama serve` and `ollama pull mistral-nemo:12b` |
+| OpenAI  | `BACKEND=openai uv run python -m ...` | Requires `OPENAI_API_KEY` env var or `/secrets/OPENAI_API_KEY` file |
 
-Override the model: `MODEL=gpt-4o BACKEND=openai python -m ...`
+Override the model: `MODEL=gpt-4o BACKEND=openai uv run python -m ...`
 
 ---
 
@@ -378,22 +368,18 @@ We welcome contributions: new feature notebooks, improvements to the toolkit lib
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/kanton-zurich/ki-kompass-rag.git
-cd ki-kompass-rag
+git clone https://github.com/SwissDataScienceCenter/ki-kompass-conversational-toolkit.git
+cd ki-kompass-conversational-toolkit
 ```
 
 ### 2. Set up your environment
 
 ```bash
-# Create and activate a virtual environment
-python -m venv rag_venv
-source rag_venv/bin/activate  # on Windows: verag_venvnv\Scripts\activate
-
-# Install all dependencies including the two editable packages
-pip install -r requirements.txt
+# Create .venv and install all dependencies including the two editable packages
+uv sync
 
 # Install pre-commit hooks (runs formatters and linters before every commit)
-pre-commit install
+uv run pre-commit install
 ```
 
 ### 3. Create a feature branch
@@ -476,5 +462,5 @@ Address comments by pushing additional commits to the same branch, do not open a
 pytest
 
 # Clear notebook outputs (replace with your notebook path)
-jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace backend/notebooks/english/T01_baseline_rag.ipynb
+uv run jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace backend/notebooks/english/T01_baseline_rag.ipynb
 ```

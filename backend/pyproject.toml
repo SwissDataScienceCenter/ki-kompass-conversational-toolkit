@@ -11,22 +11,22 @@ authors = [
 ]
 description = ""
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
-    "chromadb==1.4.1",
-    "docling==2.75.0",
-    "fastapi==0.115.14",
-    "numpy==2.3.3",
-    "ollama==0.6.1",
-    "openai==2.21.0",
-    "sentence-transformers==5.1.1",
-    "matplotlib==3.10.8",
-    "partial-json-parser==0.2.1.1.post7",
+    "conversational-toolkit",
+    "fastapi>=0.164.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.5.5",
+    "partial-json-parser>=0.2.1.1.post7",
+    "uvicorn>=0.54.0",
 ]
 dynamic = ["version"]
 
+[tool.uv.sources]
+conversational-toolkit = { workspace = true }
+
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 
 [[tool.mypy.overrides]]
 module = "matplotlib.*"
