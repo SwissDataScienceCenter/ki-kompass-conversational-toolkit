@@ -93,9 +93,13 @@ This launches the FastAPI backend and the Next.js chat frontend together.
 uv sync
 ```
 
-**Step 2: Create vector store**
+**Step 2: Create vector stores**
 
-Run `backend/notebooks/english/T00_setup_build_db.ipynb` once to populate the shared vector stores. It might take aome time to create the image vector store.
+Build the text and image vector stores the chat app uses (run once, after creating `.env.local` in Step 3). The image store downloads the Qwen3-VL embedding model and is slow on CPU; add `--skip-images` to build only the text store.
+
+```bash
+uv run python -m ki_kompass_rag.build_app_db
+```
 
 **Step 3: Create `.env.local`** (required for `make run`)
 
@@ -166,13 +170,12 @@ BACKEND=openai RESET_VS=1 python -m ki_kompass_rag.baseline_rag  # rebuild vecto
 
 ## Workshop Feature Tracks
 
-The workshop is structured as a sequence of numbered notebooks (`T00` to `T14`) in `backend/notebooks/english/`. Run notebooks top to bottom within a session.
+The workshop is structured as a sequence of numbered notebooks (`T01` to `T14`) in `backend/notebooks/english/`. Run notebooks top to bottom within a session.
 
-Run `T00_setup_build_db.ipynb` once before the other notebooks to populate the shared vector stores. The notebooks import the `conversational_toolkit` library and expect those stores to exist.
+Start with `T01_baseline_rag.ipynb`. It builds the notebooks' vector store (`backend/db/data_vs.db`) on its first run; no separate setup step is needed. The notebooks import the `conversational_toolkit` library.
 
 | Notebook                                                 | Topic                            | What you learn                                                                                                                                                                    |
 |----------------------------------------------------------|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `T00_setup_build_db.ipynb`                                    | **Setup: Build Vector Stores**   | Runs once to embed the full corpus and persist two ChromaDB collections: `vs_text` (OpenAI embeddings) and `vs_image` (Qwen3-VL embeddings) under `backend/src/ki_kompass_rag/db/`. |
 | `T01_baseline_rag.ipynb`                           | **Baseline RAG Pipeline**        | The five-stage RAG loop (chunk, embed, store, retrieve, generate), how retrieval inspection works as a debugging tool, and the main failure modes the workshop addresses.         |
 | `T02_ingestion_chunking.ipynb`                              | **Document Ingestion**           | PDF parser comparison (markitdown vs. docling), chunking strategies (fixed-size, header-based, paragraph-aware), token limits, and how chunking choice affects retrieval quality. |
 | `T03_multimodal_rag.ipynb`                                  | **Multimodal RAG**              | Retrieving text and images from a PDF with one pipeline (Qwen3-VL image embeddings). |
@@ -192,13 +195,14 @@ Run `T00_setup_build_db.ipynb` once before the other notebooks to populate the s
 .
 ├── backend/                                # RAG pipeline application
 │   ├── notebooks/                          # Workshop notebooks
-│   │   ├── english/                        # T00_setup_build_db ... T14_rag_subagent
+│   │   ├── english/                        # T01_baseline_rag ... T14_rag_subagent
 │   │   └── german/                         # German versions (same file names)
 │   └── src/ki_kompass_rag/
 │       ├── db/
 │       │   ├── vs_text/                    # ChromaDB collection: text chunks (OpenAI embeddings)
 │       │   └── vs_image/                   # ChromaDB collection: image chunks (Qwen3-VL embeddings)
 │       ├── baseline_rag.py        # Five-step pipeline (chunking, embedding, retrieval, generation)
+│       ├── build_app_db.py        # Builds the chat app's text and image vector stores
 │       ├── ingestion.py           # Parser comparison, chunking utilities, token analysis
 │       ├── evaluation.py          # Shared evaluation queries and ground-truth answers
 │       ├── advanced_retrieval.py

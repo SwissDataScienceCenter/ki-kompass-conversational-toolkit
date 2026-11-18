@@ -13,10 +13,11 @@ backend/
 │   ├── vs_image/                            # ChromaDB collection for image chunks (Qwen3-VL embeddings)
 │   └── data_vs.db/                          # ChromaDB collection for the baseline RAG pipeline
 ├── notebooks/                               # Workshop notebooks
-│   ├── english/                             # T00_setup_build_db ... T14_rag_subagent
+│   ├── english/                             # T01_baseline_rag ... T14_rag_subagent
 │   └── german/                              # German versions (same file names)
 └── src/ki_kompass_rag/
     ├── baseline_rag.py             # Five-step RAG pipeline (chunking, embedding, retrieval, generation)
+    ├── build_app_db.py             # Builds the chat app's text and image vector stores
     ├── ingestion.py                # Parser comparison, chunking utilities, token analysis
     ├── evaluation.py               # Shared EVALUATION_QUERIES with ground-truth answers
     ├── advanced_retrieval.py       # BM25, hybrid, metadata-filter retrieval
@@ -25,12 +26,24 @@ backend/
 
 ---
 
-## T00: Building the vector stores (`T00_setup_build_db.ipynb`)
+## Building the chat app's vector stores (`build_app_db.py`)
 
-A one-off setup notebook that populates both ChromaDB collections from the raw corpus in `data/`.
+The chat app (`ki_kompass_rag.main`) needs two ChromaDB collections. The notebooks do not: they build their own store (`db/data_vs.db/`) on first run.
+
+```bash
+uv run python -m ki_kompass_rag.build_app_db                # text and image stores
+uv run python -m ki_kompass_rag.build_app_db --skip-images  # text store only
+```
 
 | Step | What it does |
 |------|--------------|
+| Load all chunks | `load_chunks()` parses every file in `data/` and splits them into chunks |
+| Build text store | Embeds text chunks with OpenAI `text-embedding-3-small` and persists to `db/vs_text/` |
+| Build image store | Embeds image chunks with Qwen3-VL and persists to `db/vs_image/` |
+
+Both stores are written to `backend/db/` by default (override with the `DB_DIR` environment variable).
+
+------|--------------|
 | Load all chunks | `load_chunks()` parses every file in `data/` and splits them into chunks |
 | Build text store | Embeds text chunks with OpenAI `text-embedding-3-small` and persists to `db/vs_text/` |
 | Build image store | Embeds image chunks with Qwen3-VL and persists to `db/vs_image/` |
