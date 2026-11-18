@@ -9,7 +9,7 @@ from docling.document_converter import DocumentConverter
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import PdfFormatOption
-from docling_core.types.doc.document import PictureItem
+from docling_core.types.doc.items.picture.picture import PictureItem
 from pathlib import Path
 from markitdown import MarkItDown  # type: ignore[import-untyped]
 from PIL import Image  # type: ignore[import-untyped]

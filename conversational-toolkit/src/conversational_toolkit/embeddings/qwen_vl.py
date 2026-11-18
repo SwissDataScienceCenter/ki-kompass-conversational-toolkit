@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from qwen_vl_utils.vision_process import process_vision_info  # type: ignore[import-not-found]
+from qwen_vl_utils.vision_process import process_vision_info  # type: ignore[import-untyped]
 from transformers.models.qwen3_vl.processing_qwen3_vl import Qwen3VLProcessor
 from transformers.models.qwen3_vl.modeling_qwen3_vl import (
     Qwen3VLModel,
@@ -104,11 +104,13 @@ class _Qwen3VLEmbedder:
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        self.model = Qwen3VLForEmbedding.from_pretrained(  # type: ignore[assignment]
+        # device_map loads the weights straight onto the target device (no separate .to() call needed).
+        self.model = Qwen3VLForEmbedding.from_pretrained(
             model_name_or_path,
             trust_remote_code=trust_remote_code,
+            device_map=self.device,
             **model_kwargs,
-        ).to(self.device)  # type: ignore[union-attr]
+        )
         self.model.eval()
 
         self.processor = Qwen3VLProcessor.from_pretrained(model_name_or_path, padding_side="right")

@@ -4,11 +4,19 @@ import base64
 import numpy as np
 
 import torch
-from transformers import CLIPProcessor, CLIPModel, CLIPTokenizer, CLIPTextModel
+from transformers import CLIPProcessor, CLIPModel, CLIPTokenizer
+from transformers.modeling_outputs import BaseModelOutputWithPooling
 
 from PIL import Image
 
 from conversational_toolkit.chunking.base import Chunk
+
+
+def _pooled(output: tuple | BaseModelOutputWithPooling) -> torch.Tensor:
+    """Return the projected embedding from a CLIP get_*_features call (a model output since transformers 5)."""
+    if not isinstance(output, BaseModelOutputWithPooling) or output.pooler_output is None:
+        raise TypeError(f"Expected BaseModelOutputWithPooling with pooler_output, got {type(output).__name__}")
+    return output.pooler_output
 
 
 class CLIPEmbeddings:
@@ -18,7 +26,6 @@ class CLIPEmbeddings:
         self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
         self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-        self.text_model = CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
 
     async def get_text_embeddings(self, texts: str | list[str]) -> np.ndarray:
         if isinstance(texts, str):
@@ -27,7 +34,9 @@ class CLIPEmbeddings:
         inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
 
         with torch.no_grad():
-            text_embeddings = self.text_model(**inputs).pooler_output
+            # get_text_features applies CLIP's text projection, so text and image vectors share one space.
+            # Since transformers 5 it returns a model output; the projected embedding is in pooler_output.
+            text_embeddings = _pooled(self.clip_model.get_text_features(**inputs))
 
         return text_embeddings.squeeze().numpy()
 
@@ -44,7 +53,7 @@ class CLIPEmbeddings:
         image_inputs = self.processor(images=decoded_images, return_tensors="pt", padding=True)  # type: ignore[call-arg]
 
         with torch.no_grad():
-            image_embeddings = self.clip_model.get_image_features(**image_inputs)
+            image_embeddings = _pooled(self.clip_model.get_image_features(**image_inputs))
 
         return image_embeddings.squeeze().numpy()
 
