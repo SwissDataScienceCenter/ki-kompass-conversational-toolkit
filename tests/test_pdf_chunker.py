@@ -72,3 +72,23 @@ def test_docling_converter_is_created_once_per_image_setting(monkeypatch):
     options = [opts[module.InputFormat.PDF].pipeline_options for opts in created]
     assert [o.do_ocr for o in options] == [False, False]
     assert [o.generate_picture_images for o in options] == [False, True]
+
+
+def test_table_options_reach_docling(monkeypatch):
+    import conversational_toolkit.chunking.pdf_chunker as module
+
+    created = []
+    monkeypatch.setattr(
+        module,
+        "DocumentConverter",
+        lambda format_options: created.append(format_options),
+    )
+    PDFChunker(
+        table_mode=module.TableFormerMode.FAST, table_cell_matching=False
+    )._docling_converter(with_images=False)
+
+    table_options = created[0][
+        module.InputFormat.PDF
+    ].pipeline_options.table_structure_options
+    assert table_options.mode == module.TableFormerMode.FAST
+    assert table_options.do_cell_matching is False

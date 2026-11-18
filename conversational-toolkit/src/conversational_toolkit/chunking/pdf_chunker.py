@@ -7,7 +7,7 @@ from enum import StrEnum
 
 from docling.document_converter import DocumentConverter
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode, TableStructureOptions
 from docling.document_converter import PdfFormatOption
 from docling_core.types.doc.items.picture.picture import PictureItem
 from pathlib import Path
@@ -29,20 +29,39 @@ class PDFChunker(Chunker):
         do_ocr: Run OCR on bitmap regions (scanned pages, text inside images). Needed for scanned
             PDFs; for PDFs that already have a text layer it mostly adds time and "RapidOCR returned
             empty result" warnings for images without text (logos, photos).
+        table_mode: TableFormer model used to recognise table structure. ACCURATE (docling's default)
+            handles complex tables better; FAST is quicker but makes more mistakes on merged cells.
+        table_cell_matching: Map the PDF's own text cells onto the recognised table grid (docling's
+            default). Cells that fit no row or column are dropped, which docling logs as "pdf cells
+            matched neither a row nor a column band". Set to False to use the cells the table model
+            predicts instead; try this if values go missing from tables.
     """
 
     # TODO: Improve by not creating temporary files for images and support more image formats
     # TODO: Currently resizing, maybe not desired.
 
-    def __init__(self, do_ocr: bool = True) -> None:
+    def __init__(
+        self,
+        do_ocr: bool = True,
+        table_mode: TableFormerMode = TableFormerMode.ACCURATE,
+        table_cell_matching: bool = True,
+    ) -> None:
         self.do_ocr = do_ocr
+        self.table_mode = table_mode
+        self.table_cell_matching = table_cell_matching
         # One converter per image setting, reused across files: creating a DocumentConverter
         # reloads docling's layout and table models every time.
         self._converters: dict[bool, DocumentConverter] = {}
 
     def _docling_converter(self, with_images: bool) -> DocumentConverter:
         if with_images not in self._converters:
-            pipeline_options = PdfPipelineOptions(do_ocr=self.do_ocr, generate_picture_images=with_images)
+            pipeline_options = PdfPipelineOptions(
+                do_ocr=self.do_ocr,
+                generate_picture_images=with_images,
+                table_structure_options=TableStructureOptions(
+                    mode=self.table_mode, do_cell_matching=self.table_cell_matching
+                ),
+            )
             self._converters[with_images] = DocumentConverter(
                 format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
             )
