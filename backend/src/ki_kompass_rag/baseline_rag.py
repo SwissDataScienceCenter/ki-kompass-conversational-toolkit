@@ -87,7 +87,8 @@ SYSTEM_PROMPT = (
 )
 
 _CHUNKERS: dict[str, PDFChunker | ExcelChunker | MarkdownChunker] = {
-    ".pdf": PDFChunker(),
+    # All PDFs in data/ have a text layer, so OCR would only add time and warnings.
+    ".pdf": PDFChunker(do_ocr=False),
     ".xlsx": ExcelChunker(),
     ".xls": ExcelChunker(),
     ".md": MarkdownChunker(),

@@ -50,3 +50,25 @@ def test_without_images_returns_only_text(tmp_path, monkeypatch):
 
     assert all(c.mime_type == "text/markdown" for c in chunks)
     assert os.listdir(tmp_path) == []
+
+
+def test_docling_converter_is_created_once_per_image_setting(monkeypatch):
+    import conversational_toolkit.chunking.pdf_chunker as module
+
+    created = []
+
+    class FakeConverter:
+        def __init__(self, format_options):
+            created.append(format_options)
+
+    monkeypatch.setattr(module, "DocumentConverter", FakeConverter)
+    chunker = PDFChunker(do_ocr=False)
+
+    first = chunker._docling_converter(with_images=False)
+    assert chunker._docling_converter(with_images=False) is first
+    chunker._docling_converter(with_images=True)
+
+    assert len(created) == 2
+    options = [opts[module.InputFormat.PDF].pipeline_options for opts in created]
+    assert [o.do_ocr for o in options] == [False, False]
+    assert [o.generate_picture_images for o in options] == [False, True]

@@ -23,8 +23,30 @@ class MarkdownConverterEngine(StrEnum):
 
 
 class PDFChunker(Chunker):
+    """Convert PDFs to markdown with docling (or MarkItDown) and split them into section chunks.
+
+    Args:
+        do_ocr: Run OCR on bitmap regions (scanned pages, text inside images). Needed for scanned
+            PDFs; for PDFs that already have a text layer it mostly adds time and "RapidOCR returned
+            empty result" warnings for images without text (logos, photos).
+    """
+
     # TODO: Improve by not creating temporary files for images and support more image formats
     # TODO: Currently resizing, maybe not desired.
+
+    def __init__(self, do_ocr: bool = True) -> None:
+        self.do_ocr = do_ocr
+        # One converter per image setting, reused across files: creating a DocumentConverter
+        # reloads docling's layout and table models every time.
+        self._converters: dict[bool, DocumentConverter] = {}
+
+    def _docling_converter(self, with_images: bool) -> DocumentConverter:
+        if with_images not in self._converters:
+            pipeline_options = PdfPipelineOptions(do_ocr=self.do_ocr, generate_picture_images=with_images)
+            self._converters[with_images] = DocumentConverter(
+                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+            )
+        return self._converters[with_images]
 
     def _pdf2markdown(
         self,
@@ -39,28 +61,21 @@ class PDFChunker(Chunker):
             result = MarkItDown().convert(file_path)
             return str(result.text_content)
         elif engine == MarkdownConverterEngine.DOCLING:
-            if write_images and image_path:
-                pipeline_options = PdfPipelineOptions()
-                pipeline_options.generate_picture_images = True
+            with_images = bool(write_images and image_path)
+            conv_result = self._docling_converter(with_images).convert(file_path)
 
-                doc_converter = DocumentConverter(
-                    format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
-                )
-                conv_result = doc_converter.convert(file_path)
-
+            if with_images:
                 # Manually save images from PictureItem elements
                 doc_filename = Path(file_path).stem
                 picture_counter = 0
                 for element, _level in conv_result.document.iterate_items():
                     if isinstance(element, PictureItem) and element.image and element.image.pil_image:
                         picture_counter += 1
-                        image_filename = Path(image_path) / f"{doc_filename}-picture-{picture_counter}.png"
+                        image_filename = Path(str(image_path)) / f"{doc_filename}-picture-{picture_counter}.png"
                         with open(image_filename, "wb") as fp:
                             element.image.pil_image.save(fp, format="PNG")
 
-                return conv_result.document.export_to_markdown()  # type: ignore[no-any-return]
-            else:
-                return DocumentConverter().convert(file_path).document.export_to_markdown()  # type: ignore[no-any-return]
+            return conv_result.document.export_to_markdown()  # type: ignore[no-any-return]
         else:
             raise NotImplementedError(f"Engine '{engine}' is not supported.")
 
