@@ -23,15 +23,15 @@ Data & vector store:
 
 Usage:
     BACKEND must always be provided explicitly:
-        BACKEND=ollama python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
-        BACKEND=openai python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+        BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag
+        BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
 
     Override the query or model at runtime:
         QUERY="What is the carbon footprint of wood pallets?" \\
-        BACKEND=openai python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+        BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
 
-        MODEL=gpt-4o   BACKEND=openai python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
-        MODEL=llama3.2 BACKEND=ollama python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+        MODEL=gpt-4o   BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
+        MODEL=llama3.2 BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag
 """
 
 import asyncio
@@ -436,7 +436,7 @@ if __name__ == "__main__":
         raise SystemExit(
             "The BACKEND environment variable is not set.\n"
             "Choose one of: ollama, openai, qwen\n"
-            "Example: BACKEND=ollama python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag"
+            "Example: BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag"
         )
     asyncio.run(
         run_pipeline(

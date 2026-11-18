@@ -1,6 +1,6 @@
 # Backend RAG Pipeline
 
-This package (`sme_kt_zh_collaboration_rag`) contains the notebooks and the supporting Python modules that run the RAG pipeline for the PrimePack AG sustainability use case.
+This package (`ki_kompass_rag`) contains the notebooks and the supporting Python modules that run the RAG pipeline for the PrimePack AG sustainability use case.
 
 ---
 
@@ -24,7 +24,7 @@ backend/
 │   ├── feature3c_query_techniques.ipynb     # Query expansion and HyDE
 │   ├── feature3d_context_enrichment.ipynb   # Neighbouring-chunk context expansion
 │   └── feature4a_tools.ipynb – feature4e_rag_subagent.ipynb  # Tools and agent workflows
-└── src/sme_kt_zh_collaboration_rag/
+└── src/ki_kompass_rag/
     ├── feature0_baseline_rag.py             # Five-step RAG pipeline (chunking, embedding, retrieval, generation)
     ├── feature0_ingestion.py                # Parser comparison, chunking utilities, token analysis
     ├── feature1_evaluation.py               # Shared EVALUATION_QUERIES with ground-truth answers
@@ -135,10 +135,10 @@ Multi-step agent patterns for complex queries.
 ```bash
 # From the project root
 cd backend
-BACKEND=openai python -m sme_kt_zh_collaboration_rag.main
+BACKEND=openai python -m ki_kompass_rag.main
 
 # Or with uvicorn for hot reload during development
-uvicorn sme_kt_zh_collaboration_rag.main:app --reload --port 8080
+uvicorn ki_kompass_rag.main:app --reload --port 8080
 ```
 
 The server starts at `http://localhost:8080`. The frontend (in `frontend/`) connects to it automatically.
@@ -149,20 +149,20 @@ The server starts at `http://localhost:8080`. The frontend (in `frontend/`) conn
 
 ```bash
 # Default (OpenAI)
-python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+python -m ki_kompass_rag.feature0_baseline_rag
 
 # Ollama backend
-BACKEND=ollama python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag
 
 # Custom query
 QUERY="Which tape products have a verified EPD?" \
-python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+python -m ki_kompass_rag.feature0_baseline_rag
 
 # Force rebuild of the vector store
-RESET_VS=1 python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+RESET_VS=1 python -m ki_kompass_rag.feature0_baseline_rag
 
 # Override model
-MODEL=gpt-4o BACKEND=openai python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
+MODEL=gpt-4o BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
 ```
 
 The vector store is written to `backend/db/data_vs.db/` by default. Set `DB_DIR=/path/to/db` to use a different location. On subsequent runs, re-embedding is skipped if the store already exists (`RESET_VS=1` forces a rebuild).

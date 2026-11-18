@@ -36,12 +36,12 @@ from conversational_toolkit.retriever.hybrid_retriever import HybridRetriever
 from conversational_toolkit.retriever.vectorstore_retriever import VectorStoreRetriever
 from conversational_toolkit.vectorstores.chromadb import ChromaDBVectorStore
 
-from sme_kt_zh_collaboration_rag.feature0_baseline_rag import (
+from ki_kompass_rag.feature0_baseline_rag import (
     EMBEDDING_MODEL,
     RETRIEVER_TOP_K,
     build_llm,
 )
-from sme_kt_zh_collaboration_rag.utils.json import parse_llm_json_stream
+from ki_kompass_rag.utils.json import parse_llm_json_stream
 
 logger.add(Path(__file__).parents[4] / "logs" / "api.log", rotation="50 MB")
 
@@ -185,7 +185,7 @@ app = build_server()
 
 if __name__ == "__main__":
     uvicorn.run(
-        "sme_kt_zh_collaboration_rag.main:app",
+        "ki_kompass_rag.main:app",
         host="0.0.0.0",
         port=8080,
         reload=False,

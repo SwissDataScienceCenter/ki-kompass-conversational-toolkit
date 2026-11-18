@@ -1,4 +1,4 @@
-name: sme-kt-zh-collaboration-rag
+name: ki-kompass-rag
 dependencies:
   - python~=3.13.7
   - pip

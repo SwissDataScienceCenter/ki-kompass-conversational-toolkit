@@ -1,4 +1,4 @@
-# SME-KT-ZH Collaboration: RAG Prototyp
+# KI-Kompass: RAG Prototype
 
 A collaborative prototyping project building an open-source RAG (Retrieval-Augmented Generation) backbone that SMEs can adapt for their own knowledge management.
 
@@ -135,10 +135,10 @@ Without the Makefile:
 
 ```bash
 # OpenAI
-BACKEND=openai python -m sme_kt_zh_collaboration_rag.main
+BACKEND=openai python -m ki_kompass_rag.main
 
 # Ollama (requires `ollama serve` and a pulled model)
-BACKEND=ollama python -m sme_kt_zh_collaboration_rag.main
+BACKEND=ollama python -m ki_kompass_rag.main
 ```
 
 The server starts at `http://localhost:8080`.
@@ -167,9 +167,9 @@ jupyter lab
 ### Single query from the command line
 
 ```bash
-BACKEND=openai python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
-BACKEND=openai QUERY="Which tape products have a verified EPD?" python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag
-BACKEND=openai RESET_VS=1 python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag  # rebuild vector store
+BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
+BACKEND=openai QUERY="Which tape products have a verified EPD?" python -m ki_kompass_rag.feature0_baseline_rag
+BACKEND=openai RESET_VS=1 python -m ki_kompass_rag.feature0_baseline_rag  # rebuild vector store
 ```
 
 ---
@@ -182,7 +182,7 @@ Run `demo_build_db.ipynb` once before the feature notebooks to populate the shar
 
 | Notebook                                                 | Topic                            | What you learn                                                                                                                                                                    |
 |----------------------------------------------------------|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `demo_build_db.ipynb`                                    | **Setup: Build Vector Stores**   | Runs once to embed the full corpus and persist two ChromaDB collections: `vs_text` (OpenAI embeddings) and `vs_image` (Qwen3-VL embeddings) under `backend/src/sme_kt_zh_collaboration_rag/db/`. |
+| `demo_build_db.ipynb`                                    | **Setup: Build Vector Stores**   | Runs once to embed the full corpus and persist two ChromaDB collections: `vs_text` (OpenAI embeddings) and `vs_image` (Qwen3-VL embeddings) under `backend/src/ki_kompass_rag/db/`. |
 | `feature0a_baseline_rag.ipynb`                           | **Baseline RAG Pipeline**        | The five-stage RAG loop (chunk, embed, store, retrieve, generate), how retrieval inspection works as a debugging tool, and the main failure modes the workshop addresses.         |
 | `feature0b_ingestion.ipynb`                              | **Document Ingestion**           | PDF parser comparison (markitdown vs. docling), chunking strategies (fixed-size, header-based, paragraph-aware), token limits, and how chunking choice affects retrieval quality. |
 | `feature1a_evaluation.ipynb`                             | **Evaluation & Validation**      | Reference-free RAGAS metrics (Faithfulness, AnswerRelevancy); ground-truth metrics (ContextPrecision, ContextRecall); systematic comparison of RAG pipeline configurations.       |
@@ -213,7 +213,7 @@ Run `demo_build_db.ipynb` once before the feature notebooks to populate the shar
 │   │   ├── feature3c_query_techniques.ipynb
 │   │   ├── feature3d_context_enrichment.ipynb
 │   │   └── feature4a_tools.ipynb – feature4e_rag_subagent.ipynb
-│   └── src/sme_kt_zh_collaboration_rag/
+│   └── src/ki_kompass_rag/
 │       ├── db/
 │       │   ├── vs_text/                    # ChromaDB collection: text chunks (OpenAI embeddings)
 │       │   └── vs_image/                   # ChromaDB collection: image chunks (Qwen3-VL embeddings)
@@ -373,7 +373,7 @@ Supplier-provided specs, datasheets, and article documents. Naming: `SPEC_{categ
 
 | Backend | Command | Notes |
 |-----|-----|-----|
-| Ollama | `BACKEND=ollama python -m sme_kt_zh_collaboration_rag.feature0_baseline_rag` | Requires `ollama serve` and `ollama pull mistral-nemo:12b` |
+| Ollama | `BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag` | Requires `ollama serve` and `ollama pull mistral-nemo:12b` |
 | OpenAI  | `BACKEND=openai python -m ...` | Requires `OPENAI_API_KEY` env var or `/secrets/OPENAI_API_KEY` file |
 
 Override the model: `MODEL=gpt-4o BACKEND=openai python -m ...`
@@ -387,8 +387,8 @@ We welcome contributions: new feature notebooks, improvements to the toolkit lib
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/kanton-zurich/sme-kt-zh-collaboration-rag.git
-cd sme-kt-zh-collaboration-rag
+git clone https://github.com/kanton-zurich/ki-kompass-rag.git
+cd ki-kompass-rag
 ```
 
 ### 2. Set up your environment
