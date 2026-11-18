@@ -1,5 +1,5 @@
 import os
-import shutil
+import tempfile
 import io
 import base64
 import re
@@ -74,27 +74,62 @@ class PDFChunker(Chunker):
         file_path: str,
         engine: MarkdownConverterEngine = MarkdownConverterEngine.DOCLING,
         write_images: bool = True,
-        image_path: str | None = "./tmp",
+        image_path: str | None = None,
     ) -> list[Chunk]:
-        if image_path is not None and not os.path.exists(image_path):
-            os.makedirs(image_path)
-        markdown = self._pdf2markdown(file_path, engine, write_images=write_images, image_path=image_path)
+        """Split a PDF into one chunk per markdown section, plus one chunk per extracted image.
+
+        Images are extracted into a temporary directory that is removed afterwards. Pass
+        `image_path` to keep the extracted images in that directory instead.
+        """
+        if not write_images:
+            return self._text_chunks(self._pdf2markdown(file_path, engine))
+        if image_path is not None:
+            os.makedirs(image_path, exist_ok=True)
+            return self._chunks_with_images(file_path, engine, image_path)
+        with tempfile.TemporaryDirectory(prefix="pdf_chunker_") as tmp_dir:
+            return self._chunks_with_images(file_path, engine, tmp_dir)
+
+    def _chunks_with_images(self, file_path: str, engine: MarkdownConverterEngine, image_path: str) -> list[Chunk]:
+        image_names_before = set(os.listdir(image_path))
+        markdown = self._pdf2markdown(file_path, engine, write_images=True, image_path=image_path)
+        chunks = self._text_chunks(markdown)
+
+        # Only pick up the images written for this file, not files already in the directory.
+        for file_name in sorted(set(os.listdir(image_path)) - image_names_before):
+            extension = os.path.splitext(file_name)[1].lower()
+            if extension in [".png", ".jpg", ".jpeg", ".gif"]:
+                image_file_path = os.path.join(image_path, file_name)
+                with Image.open(image_file_path) as img:
+                    buffered = io.BytesIO()
+                    img.save(buffered, format=img.format)
+                    base64_encoding = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+                chunks.append(
+                    Chunk(
+                        title=file_name,
+                        content=base64_encoding,
+                        mime_type=f"image/{extension[1:]}",
+                        metadata={"chapters": []},
+                    )
+                )
+        return chunks
+
+    def _text_chunks(self, markdown: str) -> list[Chunk]:
         header_pattern = re.compile(r"^(#{1,6}\s.*)$", re.MULTILINE)
         matches = list(header_pattern.finditer(markdown))
 
+        if not matches:
+            return [
+                Chunk(
+                    title="",
+                    content=self._normalize_newlines(markdown),
+                    mime_type="text/markdown",
+                    metadata={"chapters": []},
+                )
+            ]
+
         chunks: list[Chunk] = []
         current_chapters: list[str] = []
-
-        if not matches:
-            processed_text = self._normalize_newlines(markdown)
-            chunk = Chunk(
-                title="",
-                content=processed_text,
-                mime_type="text/markdown",
-                metadata={"chapters": []},
-            )
-            return [chunk]
-
         for i, match in enumerate(matches):
             header_line = match.group(1).strip()
             header_level = header_line.count("#", 0, header_line.find(" "))
@@ -104,42 +139,15 @@ class PDFChunker(Chunker):
             else:
                 current_chapters = [*current_chapters[: header_level - 1], header_line]
 
-            start_idx = match.start()
-            if i < len(matches) - 1:
-                end_idx = matches[i + 1].start()
-            else:
-                end_idx = len(markdown)
-            chunk_text = markdown[start_idx:end_idx]
+            end_idx = matches[i + 1].start() if i < len(matches) - 1 else len(markdown)
+            chunk_text = markdown[match.start() : end_idx]
 
-            processed_chunk_text = self._normalize_newlines(chunk_text)
-
-            chunk = Chunk(
-                title=header_line,
-                content=processed_chunk_text,
-                mime_type="text/markdown",
-                metadata={"chapters": current_chapters.copy()},
+            chunks.append(
+                Chunk(
+                    title=header_line,
+                    content=self._normalize_newlines(chunk_text),
+                    mime_type="text/markdown",
+                    metadata={"chapters": current_chapters.copy()},
+                )
             )
-            chunks.append(chunk)
-
-        if write_images and image_path:
-            for file_name in os.listdir(image_path):
-                extension = os.path.splitext(file_name)[1].lower()
-                if extension in [".png", ".jpg", ".jpeg", ".gif"]:
-                    image_file_path = os.path.join(image_path, file_name)
-                    with Image.open(image_file_path) as img:
-                        buffered = io.BytesIO()
-                        img.save(buffered, format=img.format)
-                        base64_encoding = base64.b64encode(buffered.getvalue()).decode("utf-8")
-
-                    image_chunk = Chunk(
-                        title=file_name,
-                        content=base64_encoding,
-                        mime_type=f"image/{extension[1:]}",
-                        metadata={"chapters": []},
-                    )
-                    chunks.append(image_chunk)
-
-        if write_images and image_path:
-            shutil.rmtree(image_path)
-
         return chunks
