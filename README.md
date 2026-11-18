@@ -74,7 +74,7 @@ The workshop notebooks require JupyterLab. You can run them in an IDE or start i
 jupyter lab
 ```
 
-JupyterLab opens in your browser at `http://localhost:8888`. Navigate to `backend/notebooks/` in the file browser on the left and open `feature0a_baseline_rag.ipynb` to start.
+JupyterLab opens in your browser at `http://localhost:8888`. Navigate to `backend/notebooks/english/` in the file browser on the left and open `T01_baseline_rag.ipynb` to start.
 
 **Running cells:** Use `Shift+Enter` to run a cell and advance to the next one. Run cells top to bottom, each notebook must be executed in order within a session.
 
@@ -105,7 +105,7 @@ pip install -r requirements.txt
 
 **Step 2: Create vector store**
 
-Run `backend/notebooks/demo_build_db.ipynb` once to populate the shared vector stores. It might take aome time to create the image vector store.
+Run `backend/notebooks/english/T00_setup_build_db.ipynb` once to populate the shared vector stores. It might take aome time to create the image vector store.
 
 **Step 3: Create `.env.local`** (required for `make run`)
 
@@ -161,38 +161,38 @@ Go to `http://localhost:3000` in your browser.
 
 ```bash
 jupyter lab
-# Open backend/notebooks/feature0a_baseline_rag.ipynb to start
+# Open backend/notebooks/english/T01_baseline_rag.ipynb to start
 ```
 
 ### Single query from the command line
 
 ```bash
-BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
-BACKEND=openai QUERY="Which tape products have a verified EPD?" python -m ki_kompass_rag.feature0_baseline_rag
-BACKEND=openai RESET_VS=1 python -m ki_kompass_rag.feature0_baseline_rag  # rebuild vector store
+BACKEND=openai python -m ki_kompass_rag.baseline_rag
+BACKEND=openai QUERY="Which tape products have a verified EPD?" python -m ki_kompass_rag.baseline_rag
+BACKEND=openai RESET_VS=1 python -m ki_kompass_rag.baseline_rag  # rebuild vector store
 ```
 
 ---
 
 ## Workshop Feature Tracks
 
-The workshop is structured as progressive feature tracks, each implemented as one or more Jupyter notebooks in `backend/notebooks/`. Run notebooks top to bottom within a session.
+The workshop is structured as a sequence of numbered notebooks (`T00` to `T14`) in `backend/notebooks/english/`. Run notebooks top to bottom within a session.
 
-Run `demo_build_db.ipynb` once before the feature notebooks to populate the shared vector stores. Feature notebooks import the `conversational_toolkit` library and expect those stores to exist.
+Run `T00_setup_build_db.ipynb` once before the other notebooks to populate the shared vector stores. The notebooks import the `conversational_toolkit` library and expect those stores to exist.
 
 | Notebook                                                 | Topic                            | What you learn                                                                                                                                                                    |
 |----------------------------------------------------------|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `demo_build_db.ipynb`                                    | **Setup: Build Vector Stores**   | Runs once to embed the full corpus and persist two ChromaDB collections: `vs_text` (OpenAI embeddings) and `vs_image` (Qwen3-VL embeddings) under `backend/src/ki_kompass_rag/db/`. |
-| `feature0a_baseline_rag.ipynb`                           | **Baseline RAG Pipeline**        | The five-stage RAG loop (chunk, embed, store, retrieve, generate), how retrieval inspection works as a debugging tool, and the main failure modes the workshop addresses.         |
-| `feature0b_ingestion.ipynb`                              | **Document Ingestion**           | PDF parser comparison (markitdown vs. docling), chunking strategies (fixed-size, header-based, paragraph-aware), token limits, and how chunking choice affects retrieval quality. |
-| `feature1a_evaluation.ipynb`                             | **Evaluation & Validation**      | Reference-free RAGAS metrics (Faithfulness, AnswerRelevancy); ground-truth metrics (ContextPrecision, ContextRecall); systematic comparison of RAG pipeline configurations.       |
-| `feature1b_dataset_creation.ipynb`                       | **Synthetic Dataset Generation** | Building a validation dataset from vector store content; LLM-generated Q&A pairs; scaling beyond manual ground-truth creation.                                                    |
-| `feature2a_structured_outputs.ipynb`                     | **Structured Outputs**           | Entity-grounding prompts to prevent hallucination; structured JSON outputs with evidence levels (VERIFIED / CLAIMED / MISSING / MIXED); making claim quality machine-readable.    |
-| `feature3a_advanced_retrieval.ipynb`                     | **Retrieval Strategies**         | BM25 keyword retrieval; hybrid search via Reciprocal Rank Fusion (RRF); metadata filtering to scope retrieval to known documents.                                                 |
-| `feature3b_conversation.ipynb`                           | **Conversational RAG**           | Maintaining conversation history; multi-turn context management.                                                                                                                  |
-| `feature3c_query_techniques.ipynb`                       | **Query Improvement**            | Query expansion and HyDE (Hypothetical Document Embeddings) to improve semantic retrieval.                                                                                        |
-| `feature3d_context_enrichment.ipynb`                     | **Context Enrichment**           | Neighbouring-chunk expansion to handle answers that span chunk boundaries; token budget analysis.                                                                                 |
-| `feature4a_tools.ipynb` – `feature4e_rag_subagent.ipynb` | **Tools & Agents**               | LLM tool use; RAG as a tool; multi-step agent workflows; supplier comparison and evidence audit patterns.                                                                         |
+| `T00_setup_build_db.ipynb`                                    | **Setup: Build Vector Stores**   | Runs once to embed the full corpus and persist two ChromaDB collections: `vs_text` (OpenAI embeddings) and `vs_image` (Qwen3-VL embeddings) under `backend/src/ki_kompass_rag/db/`. |
+| `T01_baseline_rag.ipynb`                           | **Baseline RAG Pipeline**        | The five-stage RAG loop (chunk, embed, store, retrieve, generate), how retrieval inspection works as a debugging tool, and the main failure modes the workshop addresses.         |
+| `T02_ingestion_chunking.ipynb`                              | **Document Ingestion**           | PDF parser comparison (markitdown vs. docling), chunking strategies (fixed-size, header-based, paragraph-aware), token limits, and how chunking choice affects retrieval quality. |
+| `T03_multimodal_rag.ipynb`                                  | **Multimodal RAG**              | Retrieving text and images from a PDF with one pipeline (Qwen3-VL image embeddings). |
+| `T04_evaluation.ipynb`                             | **Evaluation & Validation**      | Reference-free RAGAS metrics (Faithfulness, AnswerRelevancy); ground-truth metrics (ContextPrecision, ContextRecall); systematic comparison of RAG pipeline configurations.       |
+| `T05_synthetic_dataset.ipynb`                       | **Synthetic Dataset Generation** | Building a validation dataset from vector store content; LLM-generated Q&A pairs; scaling beyond manual ground-truth creation.                                                    |
+| `T06_structured_outputs.ipynb`                     | **Structured Outputs**           | Entity-grounding prompts to prevent hallucination; structured JSON outputs with evidence levels (VERIFIED / CLAIMED / MISSING / MIXED); making claim quality machine-readable.    |
+| `T07_advanced_retrieval.ipynb`                     | **Retrieval Strategies**         | BM25 keyword retrieval; hybrid search via Reciprocal Rank Fusion (RRF); metadata filtering to scope retrieval to known documents.                                                 |
+| `T08_conversation.ipynb`                           | **Conversational RAG**           | Maintaining conversation history; multi-turn context management.                                                                                                                  |
+| `T09_query_techniques.ipynb`                       | **Query Improvement**            | Query expansion and HyDE (Hypothetical Document Embeddings) to improve semantic retrieval.                                                                                        |
+| `T10_tools.ipynb` – `T14_rag_subagent.ipynb` | **Tools & Agents**               | LLM tool use; RAG as a tool; multi-step agent workflows; supplier comparison and evidence audit patterns.                                                                         |
 
 ---
 
@@ -202,25 +202,16 @@ Run `demo_build_db.ipynb` once before the feature notebooks to populate the shar
 .
 ├── backend/                                # RAG pipeline application
 │   ├── notebooks/                          # Workshop notebooks
-│   │   ├── demo_build_db.ipynb             # One-off setup: build text + image vector stores
-│   │   ├── feature0a_baseline_rag.ipynb
-│   │   ├── feature0b_ingestion.ipynb
-│   │   ├── feature1a_evaluation.ipynb
-│   │   ├── feature1b_dataset_creation.ipynb
-│   │   ├── feature2a_structured_outputs.ipynb
-│   │   ├── feature3a_advanced_retrieval.ipynb
-│   │   ├── feature3b_conversation.ipynb
-│   │   ├── feature3c_query_techniques.ipynb
-│   │   ├── feature3d_context_enrichment.ipynb
-│   │   └── feature4a_tools.ipynb – feature4e_rag_subagent.ipynb
+│   │   ├── english/                        # T00_setup_build_db ... T14_rag_subagent
+│   │   └── german/                         # German versions (same file names)
 │   └── src/ki_kompass_rag/
 │       ├── db/
 │       │   ├── vs_text/                    # ChromaDB collection: text chunks (OpenAI embeddings)
 │       │   └── vs_image/                   # ChromaDB collection: image chunks (Qwen3-VL embeddings)
-│       ├── feature0_baseline_rag.py        # Five-step pipeline (chunking, embedding, retrieval, generation)
-│       ├── feature0_ingestion.py           # Parser comparison, chunking utilities, token analysis
-│       ├── feature1_evaluation.py          # Shared evaluation queries and ground-truth answers
-│       ├── feature3_advanced_retrieval.py
+│       ├── baseline_rag.py        # Five-step pipeline (chunking, embedding, retrieval, generation)
+│       ├── ingestion.py           # Parser comparison, chunking utilities, token analysis
+│       ├── evaluation.py          # Shared evaluation queries and ground-truth answers
+│       ├── advanced_retrieval.py
 │       └── main.py                         # FastAPI server entry point
 │
 ├── conversational-toolkit/                 # Reusable RAG components (toolkit library)
@@ -373,7 +364,7 @@ Supplier-provided specs, datasheets, and article documents. Naming: `SPEC_{categ
 
 | Backend | Command | Notes |
 |-----|-----|-----|
-| Ollama | `BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag` | Requires `ollama serve` and `ollama pull mistral-nemo:12b` |
+| Ollama | `BACKEND=ollama python -m ki_kompass_rag.baseline_rag` | Requires `ollama serve` and `ollama pull mistral-nemo:12b` |
 | OpenAI  | `BACKEND=openai python -m ...` | Requires `OPENAI_API_KEY` env var or `/secrets/OPENAI_API_KEY` file |
 
 Override the model: `MODEL=gpt-4o BACKEND=openai python -m ...`
@@ -426,7 +417,7 @@ A few guidelines depending on what you are changing:
 
 **Notebooks (`backend/notebooks/`):**
 - Keep cells focused and commented.
-- Follow the existing naming convention: `feature{N}_{short_topic}.ipynb`.
+- Follow the naming convention `T{NN}_{short_topic}.ipynb` and keep the German version in sync.
 
 **Toolkit library (`conversational-toolkit/`):**
 - Add or update unit tests in the corresponding `tests/` directory.
@@ -485,5 +476,5 @@ Address comments by pushing additional commits to the same branch, do not open a
 pytest
 
 # Clear notebook outputs (replace with your notebook path)
-jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace backend/notebooks/feature0a_baseline_rag.ipynb
+jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace backend/notebooks/english/T01_baseline_rag.ipynb
 ```

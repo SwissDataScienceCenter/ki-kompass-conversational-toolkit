@@ -13,28 +13,19 @@ backend/
 │   ├── vs_image/                            # ChromaDB collection for image chunks (Qwen3-VL embeddings)
 │   └── data_vs.db/                          # ChromaDB collection for the baseline RAG pipeline
 ├── notebooks/                               # Workshop notebooks
-│   ├── demo_build_db.ipynb                  # One-off script to build the text and image vector stores
-│   ├── feature0a_baseline_rag.ipynb         # Baseline RAG pipeline
-│   ├── feature0b_ingestion.ipynb            # Document ingestion and chunking deep-dive
-│   ├── feature1a_evaluation.ipynb           # RAGAS evaluation
-│   ├── feature1b_dataset_creation.ipynb     # Synthetic Q&A dataset generation
-│   ├── feature2a_structured_outputs.ipynb   # Structured JSON outputs with evidence levels
-│   ├── feature3a_advanced_retrieval.ipynb   # BM25, hybrid retrieval, metadata filtering
-│   ├── feature3b_conversation.ipynb         # Multi-turn conversation management
-│   ├── feature3c_query_techniques.ipynb     # Query expansion and HyDE
-│   ├── feature3d_context_enrichment.ipynb   # Neighbouring-chunk context expansion
-│   └── feature4a_tools.ipynb – feature4e_rag_subagent.ipynb  # Tools and agent workflows
+│   ├── english/                             # T00_setup_build_db ... T14_rag_subagent
+│   └── german/                              # German versions (same file names)
 └── src/ki_kompass_rag/
-    ├── feature0_baseline_rag.py             # Five-step RAG pipeline (chunking, embedding, retrieval, generation)
-    ├── feature0_ingestion.py                # Parser comparison, chunking utilities, token analysis
-    ├── feature1_evaluation.py               # Shared EVALUATION_QUERIES with ground-truth answers
-    ├── feature3_advanced_retrieval.py       # BM25, hybrid, metadata-filter retrieval
+    ├── baseline_rag.py             # Five-step RAG pipeline (chunking, embedding, retrieval, generation)
+    ├── ingestion.py                # Parser comparison, chunking utilities, token analysis
+    ├── evaluation.py               # Shared EVALUATION_QUERIES with ground-truth answers
+    ├── advanced_retrieval.py       # BM25, hybrid, metadata-filter retrieval
     └── main.py                              # FastAPI server entry point (controller + frontend)
 ```
 
 ---
 
-## Demo: Building the vector stores (`demo_build_db.ipynb`)
+## T00: Building the vector stores (`T00_setup_build_db.ipynb`)
 
 A one-off setup notebook that populates both ChromaDB collections from the raw corpus in `data/`.
 
@@ -50,7 +41,7 @@ Both stores are written to `backend/db/` by default (override with the `DB_DIR` 
 
 ## Feature tracks
 
-### Feature 0a: Baseline RAG Pipeline (`feature0a_baseline_rag.ipynb`)
+### T01: Baseline RAG Pipeline (`T01_baseline_rag.ipynb`)
 
 Introduces the five-stage RAG loop and demonstrates it end-to-end against the PrimePack AG corpus.
 
@@ -62,7 +53,7 @@ Introduces the five-stage RAG loop and demonstrates it end-to-end against the Pr
 | 4    | `build_agent()`        | Assemble the RAG agent from the retriever and an LLM backend                |
 | 5    | `ask()`                | Send a query and stream the grounded answer                                 |
 
-### Feature 0b: Document Ingestion (`feature0b_ingestion.ipynb`)
+### T02: Document Ingestion (`T02_ingestion_chunking.ipynb`)
 
 Deep-dive into document parsing and chunking; separate from the baseline so the ingestion workflow can be explored independently.
 
@@ -71,22 +62,22 @@ Deep-dive into document parsing and chunking; separate from the baseline so the 
 - Token limit: embedding model truncates at 256 tokens
 - Retrieval impact of chunking strategy choices
 
-### Feature 1a: Evaluation (`feature1a_evaluation.ipynb`)
+### T04: Evaluation (`T04_evaluation.ipynb`)
 
 Systematic measurement of RAG pipeline quality using RAGAS.
 
 - Part 1 (reference-free): Faithfulness and AnswerRelevancy
 - Part 2 (ground truth): ContextPrecision and ContextRecall
-- Shared queries defined in `feature1_evaluation.py`
+- Shared queries defined in `evaluation.py`
 
-### Feature 1b: Dataset Creation (`feature1b_dataset_creation.ipynb`)
+### T05: Dataset Creation (`T05_synthetic_dataset.ipynb`)
 
 Scaling the evaluation dataset beyond manual queries.
 
 - Manual "golden query" reference set
 - Synthetic Q&A generation from vector store chunks via LLM
 
-### Feature 2a: Structured Outputs (`feature2a_structured_outputs.ipynb`)
+### T06: Structured Outputs (`T06_structured_outputs.ipynb`)
 
 Making claim quality machine-readable.
 
@@ -94,7 +85,7 @@ Making claim quality machine-readable.
 - Pydantic validation layer for output reliability
 - Evidence levels: VERIFIED / CLAIMED / MISSING / MIXED
 
-### Feature 3a: Advanced Retrieval (`feature3a_advanced_retrieval.ipynb`)
+### T07: Advanced Retrieval (`T07_advanced_retrieval.ipynb`)
 
 Four retrieval strategies compared side-by-side.
 
@@ -103,28 +94,20 @@ Four retrieval strategies compared side-by-side.
 - Hybrid (semantic + BM25 via Reciprocal Rank Fusion)
 - Metadata filtering (scope search to known documents)
 
-### Feature 3b–3c: Conversation and Query Techniques
+### T08–T09: Conversation and Query Techniques
 
-- `feature3b`: Multi-turn conversation management with history
-- `feature3c`: Query expansion and HyDE for better semantic retrieval
+- `T08`: Multi-turn conversation management with history
+- `T09`: Query expansion and HyDE for better semantic retrieval
 
-### Feature 3d: Context Enrichment (`feature3d_context_enrichment.ipynb`)
-
-Handling answers that span chunk boundaries.
-
-- Fixed-size chunking with `chunk_index` metadata
-- ContextWindowRetriever: expand retrieved chunks with their neighbours
-- Token budget analysis for window sizes 0, 1, 2
-
-### Feature 4a–4e: Tools and Agents
+### T10–T14: Tools and Agents
 
 Multi-step agent patterns for complex queries.
 
-- `feature4a`: LLM tool use fundamentals
-- `feature4b`: LLM agents
-- `feature4c`: RAG as a tool
-- `feature4d`: RAG agent
-- `feature4e`: RAG subagent for parallel multi-document queries
+- `T10`: LLM tool use fundamentals
+- `T11`: LLM agents
+- `T12`: RAG as a tool
+- `T13`: RAG agent
+- `T14`: RAG subagent for parallel multi-document queries
 
 ---
 
@@ -149,20 +132,20 @@ The server starts at `http://localhost:8080`. The frontend (in `frontend/`) conn
 
 ```bash
 # Default (OpenAI)
-python -m ki_kompass_rag.feature0_baseline_rag
+python -m ki_kompass_rag.baseline_rag
 
 # Ollama backend
-BACKEND=ollama python -m ki_kompass_rag.feature0_baseline_rag
+BACKEND=ollama python -m ki_kompass_rag.baseline_rag
 
 # Custom query
 QUERY="Which tape products have a verified EPD?" \
-python -m ki_kompass_rag.feature0_baseline_rag
+python -m ki_kompass_rag.baseline_rag
 
 # Force rebuild of the vector store
-RESET_VS=1 python -m ki_kompass_rag.feature0_baseline_rag
+RESET_VS=1 python -m ki_kompass_rag.baseline_rag
 
 # Override model
-MODEL=gpt-4o BACKEND=openai python -m ki_kompass_rag.feature0_baseline_rag
+MODEL=gpt-4o BACKEND=openai python -m ki_kompass_rag.baseline_rag
 ```
 
 The vector store is written to `backend/db/data_vs.db/` by default. Set `DB_DIR=/path/to/db` to use a different location. On subsequent runs, re-embedding is skipped if the store already exists (`RESET_VS=1` forces a rebuild).

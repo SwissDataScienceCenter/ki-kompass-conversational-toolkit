@@ -4,7 +4,7 @@ Context window retriever that expands each retrieved chunk with its neighbours.
 After the base retriever returns its top-k results, 'ContextWindowRetriever' fetches the adjacent chunks (window_size chunks on each side) from the vector store and stitches them into a single, larger content window before returning.
 
 Requirements:
-    - Chunks must have 'chunk_index' (int) and 'source_file' (str) in their metadata. These are set by 'fixed_size_chunks()' and 'paragraph_aware_chunks()' in feature0_ingestion.py, but NOT by the default header-based PDFChunker.
+    - Chunks must have 'chunk_index' (int) and 'source_file' (str) in their metadata. These are set by 'fixed_size_chunks()' and 'paragraph_aware_chunks()' in ingestion.py, but NOT by the default header-based PDFChunker.
     - The vector store must implement 'get_chunks_by_filter()' (ChromaDBVectorStore and PGVectorStore both do).
 
 If a chunk lacks the required metadata fields, it is returned unchanged.

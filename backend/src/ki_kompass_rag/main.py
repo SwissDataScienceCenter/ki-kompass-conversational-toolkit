@@ -36,7 +36,7 @@ from conversational_toolkit.retriever.hybrid_retriever import HybridRetriever
 from conversational_toolkit.retriever.vectorstore_retriever import VectorStoreRetriever
 from conversational_toolkit.vectorstores.chromadb import ChromaDBVectorStore
 
-from ki_kompass_rag.feature0_baseline_rag import (
+from ki_kompass_rag.baseline_rag import (
     EMBEDDING_MODEL,
     RETRIEVER_TOP_K,
     build_llm,
