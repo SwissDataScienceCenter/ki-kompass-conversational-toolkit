@@ -13,7 +13,6 @@ dependencies = [
     "ipykernel>=7.0",
     "jupyterlab>=4.6.6",
     "langchain-openai>=1.0",
-    "python-dotenv>=1.0",
 ]
 
 [dependency-groups]

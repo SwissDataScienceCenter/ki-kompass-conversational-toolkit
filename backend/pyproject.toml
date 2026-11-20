@@ -4,19 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ki_kompass_rag"
-authors = [
-    # { name = "Thibaut Loiseau", email = "thibaut.loiseau@epfl.ch" },
-    # { name = "Ivan-Daniel Sievering", email = "ivan.sievering@epfl.ch" },
-    # { name = "Paulina Körner", email = "paulina.koerner@sdsc.ethz.ch" },
-]
-description = ""
+description = "KI-Kompass RAG workshop pipeline and chat app"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "conversational-toolkit",
-    "fastapi>=0.164.0",
+    "loguru>=0.7.3",
     "matplotlib>=3.10.8",
-    "numpy>=2.5.5",
     "partial-json-parser>=0.2.1.1.post7",
     "python-dotenv>=1.0",
     "uvicorn>=0.54.0",
@@ -25,13 +19,6 @@ dynamic = ["version"]
 
 [tool.uv.sources]
 conversational-toolkit = { workspace = true }
-
-[tool.mypy]
-python_version = "3.12"
-
-[[tool.mypy.overrides]]
-module = "matplotlib.*"
-ignore_missing_imports = true
 
 [tool.setuptools]
 package-dir = { "" = "src" }

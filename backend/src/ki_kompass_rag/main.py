@@ -1,6 +1,6 @@
+"""Chat app server: uvicorn on :8080 over the stores built by ki_kompass_rag.build_app_db."""
+
 import os
-import pathlib
-from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
@@ -37,25 +37,19 @@ from conversational_toolkit.retriever.vectorstore_retriever import VectorStoreRe
 from conversational_toolkit.vectorstores.chromadb import ChromaDBVectorStore
 
 from ki_kompass_rag.baseline_rag import (
+    DB_DIR,
     EMBEDDING_MODEL,
     RETRIEVER_TOP_K,
+    ROOT,
     build_llm,
 )
+from ki_kompass_rag.build_app_db import IMAGE_VS_PATH, TEXT_VS_PATH
 from ki_kompass_rag.utils.json import parse_llm_json_stream
 
-logger.add(Path(__file__).parents[4] / "logs" / "api.log", rotation="50 MB")
+logger.add(ROOT / "logs" / "api.log", rotation="50 MB")
 
 BACKEND = os.getenv("BACKEND", "openai")
-_secret = pathlib.Path("/secrets/OPENAI_API_KEY")
-if "OPENAI_API_KEY" not in os.environ and _secret.exists():
-    os.environ["OPENAI_API_KEY"] = _secret.read_text().strip()
-
-_ROOT = Path(__file__).parents[3]
-_DB_DIR = Path(os.getenv("DB_DIR", str(_ROOT / "backend" / "db")))
-_DB_DIR.mkdir(parents=True, exist_ok=True)
-
-IMAGE_VS_PATH = _DB_DIR / "vs_image"
-TEXT_VS_PATH = _DB_DIR / "vs_text"
+DB_DIR.mkdir(parents=True, exist_ok=True)
 
 SYSTEM_PROMPT = dedent("""
     You are a sustainability compliance assistant for PrimePack AG.
@@ -82,29 +76,25 @@ class CustomRAG(RAG):
         raw_text = (answer.content[0].text if answer.content else "") or ""
         json_answer: dict[str, Any] = parse_llm_json_stream(raw_text) or {}
 
-        content: str = json_answer.get("answer", "")
-        relevant_source_ids: list[str] = json_answer.get("used_sources_id", [])
-        follow_up_questions: list[str] = json_answer.get("follow_up_questions", [])
-        unique_sources = list(
-            {getattr(s, "id", None): s for s in answer.sources}.values()
-        )
+        used_ids = set(json_answer.get("used_sources_id", []))
+        sources = {
+            source_id: s
+            for s in answer.sources
+            if (source_id := getattr(s, "id", None)) in used_ids
+        }
         return answer.model_copy(
             update={
-                "content": [MessageContent(type="text", text=content)],
-                "sources": [
-                    source
-                    for source in unique_sources
-                    if getattr(source, "id", None) in relevant_source_ids
+                "content": [
+                    MessageContent(type="text", text=json_answer.get("answer", ""))
                 ],
-                "follow_up_questions": follow_up_questions,
+                "sources": list(sources.values()),
+                "follow_up_questions": json_answer.get("follow_up_questions", []),
             }
         )
 
 
-json_schema = {
+ANSWER_SCHEMA = {
     "type": "object",
-    "name": "AnswerSchema",
-    "description": "The structured output for the user's answer. This should contain, the answer we will send to the user and all the ids of the relevant sources used.",
     "properties": {
         "answer": {
             "type": "string",
@@ -113,16 +103,12 @@ json_schema = {
         "used_sources_id": {
             "type": "array",
             "description": "List of source IDs used to generate the answer. Do not invent them and give the exact id of the source which was used.",
-            "items": {
-                "type": "string",
-            },
+            "items": {"type": "string"},
         },
         "follow_up_questions": {
             "type": "array",
-            "description": "These are follow-up questions that the USER might want to ask based on the current answer. ONLY add those if there were sources used to generate the answer. Use the sources to identify potential follow-up questions that are directly relevant to the current answer and can help the user dive deeper into the topic if they choose to. If there are no sources used, this should be an empty list.",
-            "items": {
-                "type": "string",
-            },
+            "description": "Follow-up questions the USER might want to ask, based on the sources used for this answer. Empty if no sources were used.",
+            "items": {"type": "string"},
         },
     },
     "required": ["answer", "used_sources_id", "follow_up_questions"],
@@ -154,27 +140,28 @@ def build_server():
         response_format={
             "type": "json_schema",
             "json_schema": {
-                "schema": json_schema,
                 "name": "AnswerSchema",
+                "schema": ANSWER_SCHEMA,
+                "strict": True,
             },
         },
     )
     agent = CustomRAG(
         llm=llm,
-        utility_llm=llm,
+        # Query rewriting needs plain text, not the answer schema.
+        utility_llm=build_llm(backend=BACKEND),
         system_prompt=SYSTEM_PROMPT,
         retrievers=[hybrid_retriever, image_retriever],
-        number_query_expansion=0,
     )
 
     controller = ConversationalToolkitController(
         conversation_db=InMemoryConversationDatabase(
-            str(_DB_DIR / "conversations.json")
+            str(DB_DIR / "conversations.json")
         ),
-        message_db=InMemoryMessageDatabase(str(_DB_DIR / "messages.json")),
-        reaction_db=InMemoryReactionDatabase(str(_DB_DIR / "reactions.json")),
-        source_db=InMemorySourceDatabase(str(_DB_DIR / "sources.json")),
-        user_db=InMemoryUserDatabase(str(_DB_DIR / "users.json")),
+        message_db=InMemoryMessageDatabase(str(DB_DIR / "messages.json")),
+        reaction_db=InMemoryReactionDatabase(str(DB_DIR / "reactions.json")),
+        source_db=InMemorySourceDatabase(str(DB_DIR / "sources.json")),
+        user_db=InMemoryUserDatabase(str(DB_DIR / "users.json")),
         agent=agent,
     )
 
@@ -184,10 +171,4 @@ def build_server():
 app = build_server()
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "ki_kompass_rag.main:app",
-        host="0.0.0.0",
-        port=8080,
-        reload=False,
-        log_level="info",
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8080)

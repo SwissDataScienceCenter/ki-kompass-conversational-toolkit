@@ -1,76 +1,64 @@
-"""
-Feature Track 1: Evaluation & Validation
-
-Canonical test set for the PrimePack AG RAG system.
-Import EVALUATION_QUERIES to run the evaluation suite against any pipeline variant.
-"""
+"""Hand-written evaluation queries with ground-truth answers, checked against the documents in data/."""
 
 EVALUATION_QUERIES: list[dict] = [
-    # portfolio scope
     {
         "query": "Does PrimePack AG offer a product called the Lara Pallet?",
         "ground_truth_answer": (
-            "No. The Lara Pallet does not exist in the PrimePack AG portfolio. The current pallet portfolio is: Noé Pallet (32-100, CPR System), Wooden Pallet 1208 (32-101, CPR System), Recycled Plastic Pallet (32-102, CPR System), Logypal 1 (32-103, Relicyc), LogyLight (32-104, Relicyc), and EP 08 (32-105, StabilPlastik)."
+            "No. No product called Lara Pallet appears in any PrimePack AG document. The active portfolio is listed in product_overview.xlsx, and its pallets are: Noé pallet (32-100, CPR System), Wooden pallet (32-101, CPR System), Plastic pallet (32-102, CPR System), Logypal 1 (32-103, Relicyc), LogyLight (32-104, Relicyc), and Plastic pallet EP 08 (32-105, StabilPlastik)."
         ),
         "expected_keywords": ["not", "no", "portfolio"],
         "category": "portfolio_scope",
         "difficulty": "easy",
     },
-    # multi-product retrieval
     {
         "query": "Which products in the portfolio have a third-party verified EPD?",
         "ground_truth_answer": (
-            "Products with third-party verified EPDs: 50-100 (IPG Hot Melt Tape), 50-101 (IPG Water-Activated Tape), 32-100 (Noé Pallet, CPR System), 32-103 (Logypal 1, Relicyc), 32-105 (EP 08, StabilPlastik), 11-100 (Cartonpallet CMP, redbox), 11-101 (Corrugated cardboard, Grupak). Products without a verified EPD: 50-102 (tesapack ECO), 32-101, 32-102, 32-104."
+            "Products with an EPD: 50-100 (IPG Pressure-Sensitive Hot Melt Carton Sealing Tape), 50-101 (IPG Water-Activated Tape), 32-100 (Noé pallet, CPR System), 32-103 (Logypal 1, Relicyc), 32-105 (Plastic pallet EP 08, StabilPlastik), 11-100 (Cartonpallet CMP Roserio, redbox), 11-101 (Corrugated cardboard packaging, Grupak). Products without an EPD: 50-102 (tesapack ECO & ULTRA STRONG ecoLogo), 32-101, 32-102, 32-104."
         ),
         "expected_keywords": ["50-100", "50-101", "32-100", "32-103", "32-105"],
         "category": "portfolio_scope",
         "difficulty": "easy",
     },
-    # claim verification
     {
         "query": "Can the 68% CO2 reduction claim for tesapack ECO (product 50-102) be included in a customer sustainability response?",
         "ground_truth_answer": (
-            "No. The 68% CO2 reduction figure is a self-declared internal assessment by Tesa SE, not independently verified through an EPD. PrimePack AGs procurement policy classifies this as Level B/C evidence. It may only be cited with an explicit caveat that it is unverified. Additionally, the carbon neutrality target for end of 2025 is a forward-looking goal, not a current verified status."
+            "Not as a verified fact. The 68% CO2 reduction per roll comes from an internal comparative assessment by Tesa SE (2019 baseline) and is not verified by an EPD or third-party LCA. Under PrimePack AG's supplier policy it is at best Level B evidence and may only be cited with the caveat 'self-declared, not independently verified'; GWP figures shared with customers must come from a verified EPD. The carbon neutrality goal (end of 2025 in the text, 2026 in the brochure's timeline) is a target, not a current status."
         ),
         "expected_keywords": ["not", "EPD", "internal"],
         "category": "claim_verification",
         "difficulty": "hard",
     },
-    # missing data
     {
         "query": "What verified environmental data is available for the LogyLight pallet (product 32-104)?",
         "ground_truth_answer": (
-            "No verified environmental data is available for LogyLight (32-104). The datasheet explicitly states that GWP and all other LCA figures are not yet available. An LCA study has been commissioned (REL-LCA-2024-07) and a third-party verified EPD was expected by Q2 2025, but no verified figures exist. The 75% recycled content figure is a self-declaration with no independent audit. LogyLight must not be included in customer-facing environmental comparisons."
+            "None. The LogyLight sustainability information sheet (November 2024) lists GWP and all other impact categories as 'Data not yet available' (LCA in preparation). An ISO 14044 LCA has been commissioned (study reference REL-LCA-2024-07); the sheet expects a third-party verified EPD by Q2 2026, while the supplier policy's January 2025 status table says Q2 2025. The 75% post-consumer recycled content and the 100% recyclability are self-declared, without third-party audit. LogyLight must not be given any GWP or environmental figure."
         ),
         "expected_keywords": ["not yet available", "LCA", "EPD"],
         "category": "missing_data",
         "difficulty": "easy",
     },
-    # source conflict
     {
         "query": "Which GWP source should be used for Relicyc Logypal 1: the 2021 datasheet or the 2023 EPD?",
         "ground_truth_answer": (
-            "The 2023 third-party verified EPD (Relicyc EPD No. S-P-10482) is the authoritative source. The 2021 internal datasheet reporting 4.1 kg CO2e per pallet is marked SUPERSEDED and must not be cited. When two sources conflict, PrimePack AGs policy requires preferring the more recent third-party verified source."
+            "The 2023 third-party verified EPD (EPD International registration S-P-09135, published 2023-06-26). The June 2021 datasheet reports 4.1 kg CO2e per pallet (50-trip lifetime) from Relicyc's internal 2020 LCA, which it states was not independently verified. PrimePack AG's policy says to flag conflicting figures, state both values, and prefer the more recent third-party verified source; the 4.1 kg figure must not be cited as verified."
         ),
-        "expected_keywords": ["EPD", "2023", "superseded"],
+        "expected_keywords": ["EPD", "2023", "verified"],
         "category": "source_conflict",
         "difficulty": "hard",
     },
-    # missing data
     {
         "query": "Are any tape products confirmed to be PFAS-free?",
         "ground_truth_answer": (
-            "No tape product is confirmed PFAS-free. As of January 2025, no PFAS declarations have been received from IPG or Tesa SE. The Tesa hot-melt, free of intentionally added solvents claim does not constitute a PFAS declaration. No tape product may be described as PFAS-free until explicit supplier declarations are received and reviewed."
+            "No. As of January 2025, PFAS declarations are outstanding for all tape suppliers (IPG and Tesa SE), and PrimePack AG must not make PFAS-free claims until they are received. Tesa's 'hot-melt, free of intentionally added solvents' adhesive is not a PFAS declaration."
         ),
-        "expected_keywords": ["no", "not received", "declaration"],
+        "expected_keywords": ["no", "declaration"],
         "category": "missing_data",
         "difficulty": "medium",
     },
-    # policy
     {
         "query": "Which suppliers are not yet compliant with the EPD requirement by end of 2025?",
         "ground_truth_answer": (
-            "Tesa SE (supplier of tesapack ECO, product 50-102) and CPR System (supplier of Wooden Pallet 32-101 and Recycled Plastic Pallet 32-102) are not yet compliant with the EPD requirement by end of 2025."
+            "As of January 2025, Tesa SE (50-102, no EPD, carbon claims unverified) and CPR System for 32-101 and 32-102 (no EPD, internal calculation only) are non-compliant. Relicyc's LogyLight (32-104) is in progress: LCA commissioned, EPD pending."
         ),
         "expected_keywords": ["Tesa", "CPR"],
         "category": "policy",

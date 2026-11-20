@@ -1,41 +1,33 @@
-# Python cache
+# Python
+__pycache__/
 *.pyc
-.ipynb_checkpoints/
 *.egg-info/
-
-# Virtual environments
+.ipynb_checkpoints/
+.venv/
 venv/
 
-# IDE settings
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# IDE / OS
 .vscode/
 .idea/
-
-# OSX-specific
 .DS_Store
 
-# Environment files
-.env.local
-.env.production
+# Secrets
+.env
+.env.*
+!frontend/.env
 
-# Data / databases
-*.db
-
-# Runtime artefacts
-logs/
-dist/
-users.json
-sources.json
-conversations.json
-messages.json
-reactions.json
-chunks.db/
-
-rag_venv/
+# Runtime artefacts (vector stores, conversation JSON, logs)
 db/
-images_unstructured_pdf/
+logs/
+tmp/
+*.db
+dist/
 
+# Frontend
 node_modules/
 .next/
-
-# uv
-.venv/

@@ -1,0 +1,103 @@
+import asyncio
+
+import pytest
+
+from conversational_toolkit.chunking.base import Chunk
+from ki_kompass_rag import baseline_rag, ingestion
+from ki_kompass_rag.tool_agents import (
+    HalfBoldText,
+    RetrieveRelevantChunks,
+    chunks_to_text,
+)
+from ki_kompass_rag.utils.json import parse_llm_json_stream
+
+
+def chunk(content: str, source: str = "a.pdf") -> Chunk:
+    return Chunk(
+        title="t",
+        content=content,
+        mime_type="text/markdown",
+        metadata={"source_file": source},
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            '```json\n{"answer": "hi", "used_sources_id": ["1"]}\n```',
+            {"answer": "hi", "used_sources_id": ["1"]},
+        ),
+        ('{"answer": "trunc', {"answer": "trunc"}),
+        ('Here you go: {"answer": "x"}', {"answer": "x"}),
+        ("plain text", {"answer": "plain text"}),
+        ("{]", None),
+    ],
+)
+def test_parse_llm_json_stream(text, expected):
+    assert parse_llm_json_stream(text) == expected
+
+
+def test_chunks_to_text():
+    text = chunks_to_text([chunk("x", "a.pdf"), chunk("y", "b.pdf")])
+    assert text == "## a.pdf: t\n```\nx\n```\n\n---\n\n## b.pdf: t\n```\ny\n```"
+    assert chunks_to_text([]) == ""
+
+
+def test_retrieve_tool_returns_sources():
+    class FakeRetriever:
+        async def retrieve(self, query):
+            return [chunk(query)]
+
+    result = asyncio.run(RetrieveRelevantChunks(FakeRetriever()).call({"query": "q"}))  # type: ignore[arg-type]
+    assert result["_sources"] == [
+        {
+            "title": "t",
+            "content": "q",
+            "mime_type": "text/markdown",
+            "metadata": {"source_file": "a.pdf"},
+        }
+    ]
+
+
+def test_half_bold_text():
+    result = asyncio.run(HalfBoldText().call({"text": "a b c"}))
+    assert result == {"result": "**a** b **c**"}
+
+
+def test_load_chunks_filters_then_limits(tmp_path, monkeypatch):
+    for name in ["EVALUATION_gt.md", "a.png", "b.md", "c.txt", "d.md"]:
+        (tmp_path / name).write_text("# Heading\n\nbody")
+    monkeypatch.setattr(baseline_rag, "DATA_DIR", tmp_path)
+
+    chunks = baseline_rag.load_chunks(max_files=2)
+
+    assert {c.metadata["source_file"] for c in chunks} == {"b.md", "c.txt"}
+
+
+def test_build_llm_rejects_unknown_backend():
+    with pytest.raises(ValueError, match="Unsupported backend"):
+        baseline_rag.build_llm("bogus")
+
+
+def test_fixed_size_chunks_overlap(monkeypatch):
+    monkeypatch.setattr(ingestion, "_markdown", lambda _: "abcdefghij")
+    chunks = ingestion.fixed_size_chunks("x.pdf", chunk_size=4, overlap=1)
+    assert [c.content for c in chunks] == ["abcd", "defg", "ghij", "j"]
+
+
+def test_paragraph_aware_chunks_merges_up_to_target(monkeypatch):
+    monkeypatch.setattr(ingestion, "_markdown", lambda _: "aa\n\nbb\n\ncccccc\n\nd")
+    chunks = ingestion.paragraph_aware_chunks("x.pdf", target_chars=5)
+    assert [c.content for c in chunks] == ["aa\n\nbb", "cccccc", "d"]
+
+
+def test_analyze_chunks():
+    stats = ingestion.analyze_chunks([chunk("a" * n) for n in (1, 3, 10)], "s")
+    assert (
+        stats.total_chunks,
+        stats.min_chars,
+        stats.max_chars,
+        stats.median_chars,
+    ) == (3, 1, 10, 3)
+    assert ingestion.analyze_chunks([], "empty").total_chunks == 0

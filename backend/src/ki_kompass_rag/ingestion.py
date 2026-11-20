@@ -1,24 +1,20 @@
-"""
-Feature Track 1: Document Ingestion & Chunking
-
-Explores and compares three chunking strategies:
-    1. header_based: PDFChunker splits on Markdown headings (one chunk per section)
-    2. fixed_size: Fixed character window with overlap (predictable sizes)
-    3. paragraph_aware: Merge paragraphs until a target size is reached
-
-The embedding model (all-MiniLM-L6-v2) has a 256-token limit. Chunks that exceed this are silently truncated -> information at the end is lost. Visualising chunk-size distributions before embedding exposes this problem and motivates switching to models with higher token limits (e.g. OpenAI text-embedding-3-small: 8 191 tokens).
-"""
+"""Chunking strategies (header-based, fixed-size, paragraph-aware) and chunk-size statistics."""
 
 from dataclasses import dataclass
-import matplotlib.pyplot as plt  # type: ignore[import-not-found]
-from pathlib import Path
-from typing import Any, Callable
+from functools import lru_cache
+from statistics import median
 
-from docling.document_converter import DocumentConverter  # type: ignore[import-untyped]
-from loguru import logger
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 from conversational_toolkit.chunking.base import Chunk
-from conversational_toolkit.chunking.pdf_chunker import PDFChunker
+from conversational_toolkit.chunking.pdf_chunker import (
+    PDFChunker,
+)
+
+EMBEDDING_TOKEN_LIMIT = 8191  # OpenAI text-embedding-3-*
+
+_PDF_CHUNKER = PDFChunker(do_ocr=False)
 
 
 @dataclass
@@ -28,148 +24,108 @@ class ChunkStats:
     avg_chars: float
     min_chars: int
     max_chars: int
-    median_chars: int
+    median_chars: float
+    over_token_limit: int
 
     def __str__(self) -> str:
-        return f"strategy={self.strategy}, chunks={self.total_chunks}, avg={round(self.avg_chars, 3)}, min={self.min_chars}, max={self.max_chars}"
+        return (
+            f"strategy={self.strategy}, chunks={self.total_chunks}, avg={self.avg_chars:.0f}, "
+            f"median={self.median_chars:.0f}, min={self.min_chars}, max={self.max_chars}, "
+            f">{EMBEDDING_TOKEN_LIMIT} tokens={self.over_token_limit}"
+        )
 
 
 def estimate_tokens(text: str) -> int:
-    """Rough estimate: 1 token ≈ 4 characters (good enough for sizing decisions)."""
+    """Rough token count: ~4 characters per token."""
     return len(text) // 4
 
 
 def analyze_chunks(chunks: list[Chunk], strategy_name: str) -> ChunkStats:
-    """Compute size statistics for a list of chunks."""
-    if not chunks:
-        return ChunkStats(strategy_name, 0, 0.0, 0, 0, 0)
-    lengths = sorted(len(c.content) for c in chunks)
-    n = len(lengths)
+    """Size statistics of chunks, in characters."""
+    lengths = [len(c.content) for c in chunks] or [0]
     return ChunkStats(
         strategy=strategy_name,
-        total_chunks=n,
-        avg_chars=sum(lengths) / n,
-        min_chars=lengths[0],
-        max_chars=lengths[-1],
-        median_chars=lengths[n // 2],
+        total_chunks=len(chunks),
+        avg_chars=sum(lengths) / len(lengths),
+        min_chars=min(lengths),
+        max_chars=max(lengths),
+        median_chars=median(lengths),
+        over_token_limit=sum(
+            estimate_tokens(c.content) > EMBEDDING_TOKEN_LIMIT for c in chunks
+        ),
     )
 
 
 def char_histogram(
     chunks: list[Chunk], bins: int = 10, title: str = "Chunk character lengths"
-):
-    """Return a matplotlib histogram of chunk character lengths."""
-    lengths = [len(c.content) for c in chunks]
+) -> Figure:
+    """Histogram of chunk character lengths (displayed by Jupyter as the cell output)."""
     fig, ax = plt.subplots()
-    ax.hist(lengths, bins=bins, edgecolor="black")
-    ax.set_xlabel("Characters")
-    ax.set_ylabel("Count")
-    ax.set_title(title)
-    plt.tight_layout()
+    ax.hist([len(c.content) for c in chunks], bins=bins, edgecolor="black")
+    ax.set(xlabel="Characters", ylabel="Count", title=title)
+    plt.close(fig)
     return fig
 
 
+@lru_cache(maxsize=8)
+def _markdown(file_path: str) -> str:
+    return _PDF_CHUNKER.to_markdown(file_path)
+
+
 def header_based_chunks(file_path: str) -> list[Chunk]:
-    """Header-based chunking (PDFChunker default): one chunk per Markdown heading section."""
-    return PDFChunker().make_chunks(file_path)
+    """One chunk per Markdown heading section (PDFChunker default)."""
+    return _PDF_CHUNKER.make_chunks(file_path, write_images=False)
 
 
 def fixed_size_chunks(
-    file_path: str,
-    chunk_size: int = 800,  # in characters
-    overlap: int = 100,  # in characters
+    file_path: str, chunk_size: int = 800, overlap: int = 100
 ) -> list[Chunk]:
-    """
-    Fixed-size character chunking with overlap.
-
-    Produces predictable chunk sizes regardless of document structure. Overlap preserves context across chunk boundaries. Risk: may cut mid-sentence.
-    """
-    markdown: str = DocumentConverter().convert(file_path).document.export_to_markdown()
-    chunks: list[Chunk] = []
-    start = 0
-    idx = 0
-    while start < len(markdown):
-        end = min(start + chunk_size, len(markdown))
-        content = markdown[start:end]
-        chunks.append(
-            Chunk(
-                title=f"chunk_{idx:04d}",
-                content=content,
-                mime_type="text/markdown",
-                metadata={"chunk_index": idx, "start_char": start, "end_char": end},
-            )
+    """Fixed character windows with overlap; may cut mid-sentence."""
+    if not 0 <= overlap < chunk_size:
+        raise ValueError("overlap must be in [0, chunk_size)")
+    markdown = _markdown(file_path)
+    return [
+        Chunk(
+            title=f"chunk_{i:04d}",
+            content=markdown[start : start + chunk_size],
+            mime_type="text/markdown",
+            metadata={
+                "chunk_index": i,
+                "start_char": start,
+                "end_char": min(start + chunk_size, len(markdown)),
+            },
         )
-        start += chunk_size - overlap
-        idx += 1
-    return chunks
+        for i, start in enumerate(range(0, len(markdown), chunk_size - overlap))
+    ]
 
 
 def paragraph_aware_chunks(file_path: str, target_chars: int = 600) -> list[Chunk]:
-    """
-    Paragraph-aware chunking: split on blank lines (\\n\\n), then merge short paragraphs until the target character count is reached.
-
-    Produces semantically coherent chunks without hard size limits per paragraph.
-    """
-    markdown: str = DocumentConverter().convert(file_path).document.export_to_markdown()
-    paragraphs = [p.strip() for p in markdown.split("\n\n") if p.strip()]
-    chunks: list[Chunk] = []
-    current: list[str] = []
-    current_len = 0
-    idx = 0
-    for para in paragraphs:
-        if current_len + len(para) > target_chars and current:
-            content = "\n\n".join(current)
-            chunks.append(
-                Chunk(
-                    title=f"para_chunk_{idx:04d}",
-                    content=content,
-                    mime_type="text/markdown",
-                    metadata={"chunk_index": idx},
-                )
-            )
-            idx += 1
-            current = [para]
-            current_len = len(para)
+    """Split on blank lines and merge paragraphs up to target_chars (a longer paragraph stays whole)."""
+    groups: list[list[str]] = []
+    size = 0
+    for para in filter(None, (p.strip() for p in _markdown(file_path).split("\n\n"))):
+        if groups and size + len(para) <= target_chars:
+            groups[-1].append(para)
+            size += len(para)
         else:
-            current.append(para)
-            current_len += len(para)
-    if current:
-        chunks.append(
-            Chunk(
-                title=f"para_chunk_{idx:04d}",
-                content="\n\n".join(current),
-                mime_type="text/markdown",
-                metadata={"chunk_index": idx},
-            )
+            groups.append([para])
+            size = len(para)
+    return [
+        Chunk(
+            title=f"para_chunk_{i:04d}",
+            content="\n\n".join(group),
+            mime_type="text/markdown",
+            metadata={"chunk_index": i},
         )
-    return chunks
-
-
-def compare_strategies(file_path: str) -> dict[str, tuple[list[Chunk], ChunkStats]]:
-    """
-    Run all three chunking strategies on a single file and return {strategy_name: (chunks, stats)} for inspection and comparison.
-    """
-    logger.info(f"Comparing chunking strategies on: {Path(file_path).name}")
-    results: dict[str, tuple[list[Chunk], ChunkStats]] = {}
-
-    strategies: list[tuple[str, Callable[..., list[Chunk]], dict[str, Any]]] = [
-        ("header_based", header_based_chunks, {}),
-        ("fixed_size_800", fixed_size_chunks, {"chunk_size": 800, "overlap": 100}),
-        ("paragraph_500", paragraph_aware_chunks, {"target_chars": 500}),
+        for i, group in enumerate(groups)
     ]
-    for name, fn, kwargs in strategies:
-        chunks = fn(file_path, **kwargs)
-        stats = analyze_chunks(chunks, name)
-        results[name] = (chunks, stats)
-        logger.info(f"{stats}")
-
-    return results
 
 
-def print_comparison_table(results: dict[str, tuple[list[Chunk], ChunkStats]]) -> None:
-    """Print a compact comparison table to stdout."""
-    header = f"{'Strategy':<22}  {'Chunks':>6}  {'Avg chars':>9}  {'Min':>5}  {'Max':>6}  {'>256tok':>7}"
-    print(header)
-    print("-" * len(header))
-    for _, (_, stats) in results.items():
-        print(str(stats))
+def compare_strategies(file_path: str) -> dict[str, ChunkStats]:
+    """Stats of the three strategies on one file, keyed by strategy name."""
+    chunkings = {
+        "header_based": header_based_chunks(file_path),
+        "fixed_size_800": fixed_size_chunks(file_path, chunk_size=800, overlap=100),
+        "paragraph_500": paragraph_aware_chunks(file_path, target_chars=500),
+    }
+    return {name: analyze_chunks(chunks, name) for name, chunks in chunkings.items()}
