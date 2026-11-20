@@ -32,11 +32,18 @@ class ChromaDBVectorStore(VectorStore):
             name=collection_name, configuration={"hnsw": {"space": "cosine"}}
         )
         hnsw = self.collection.configuration.get("hnsw") or {}
-        self._space = hnsw.get("space", "l2")
+        self.space: str = hnsw.get("space", "l2")
+
+    def reset(self) -> None:
+        """Delete all chunks and recreate the collection with cosine distance."""
+        name = self.collection.name
+        self.client.delete_collection(name)
+        self.collection = self.client.create_collection(name=name, configuration={"hnsw": {"space": "cosine"}})
+        self.space = "cosine"
 
     def _similarity(self, distance: float) -> float:
         # Chroma's l2 is the squared distance, which is 2 - 2 * cosine for normalised embeddings.
-        return 1 - distance / 2 if self._space == "l2" else 1 - distance
+        return 1 - distance / 2 if self.space == "l2" else 1 - distance
 
     def _record(self, chunk_id: str, document: str, metadata: Any) -> dict[str, Any]:
         meta = {k: _decode_metadata(v) for k, v in (metadata or {}).items()}

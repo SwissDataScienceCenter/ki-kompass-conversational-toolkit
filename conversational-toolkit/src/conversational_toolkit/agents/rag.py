@@ -14,12 +14,18 @@ from conversational_toolkit.utils.retriever import (
 from conversational_toolkit.vectorstores.base import ChunkRecord
 
 
+def _source_tag(source: ChunkRecord, **attrs: str) -> str:
+    if file := source.metadata.get("source_file"):
+        attrs["file"] = str(file)
+    return f"<source id='{source.id}'" + "".join(f" {k}='{v}'" for k, v in attrs.items()) + ">"
+
+
 def _source_message(source: ChunkRecord) -> LLMMessage:
     if "text" in source.mime_type:
-        content = [MessageContent(type="text", text=f"<source id='{source.id}'>{source.content}</source>")]
+        content = [MessageContent(type="text", text=f"{_source_tag(source)}{source.content}</source>")]
     elif "image" in source.mime_type:
         content = [
-            MessageContent(type="text", text=f"<source id='{source.id}' type='image'>"),
+            MessageContent(type="text", text=_source_tag(source, type="image")),
             MessageContent(type="image", image_url=source.content),
             MessageContent(type="text", text="</source>"),
         ]

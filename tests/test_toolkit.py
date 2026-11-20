@@ -171,6 +171,10 @@ def test_chroma_scores_are_similarities_and_metadata_round_trips(tmp_path):
     assert [m.score for m in matches] == pytest.approx([1.0, 0.0], abs=1e-6)
     assert matches[0].metadata["chapters"] == ["a"]
 
+    store.reset()
+    assert store.collection.count() == 0
+    assert ChromaDBVectorStore(str(tmp_path)).space == "cosine"
+
 
 def test_in_memory_store_persists(tmp_path):
     path = str(tmp_path / "messages.json")

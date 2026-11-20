@@ -46,7 +46,7 @@ SYSTEM_PROMPT = (
     "- Use the provided excerpts as your only source of truth. Do not rely on outside knowledge.\n"
     "- Use all relevant excerpts when forming your answer.\n"
     "- If the answer cannot be found in the excerpts, clearly say that you do not know.\n"
-    "- Always cite the source document for any claim you make.\n"
+    "- Always cite the source document by file name for any claim you make.\n"
     "- If excerpts contain conflicting information, report both values and flag the conflict.\n"
     "- Distinguish between third-party verified claims (EPDs) and self-declared supplier claims."
 )
@@ -163,12 +163,10 @@ async def build_vector_store(
 ) -> ChromaDBVectorStore:
     """Embed chunks into a ChromaDB store at db_path; skipped if the store is non-empty and not reset."""
     vector_store = ChromaDBVectorStore(db_path=str(db_path))
-    collection = vector_store.collection
 
     if reset:
-        vector_store.client.delete_collection(collection.name)
-        vector_store.collection = vector_store.client.create_collection(collection.name)
-    elif (count := collection.count()) > 0:
+        vector_store.reset()
+    elif (count := vector_store.collection.count()) > 0:
         logger.info(
             f"Vector store already contains {count} chunks, skipping embedding."
         )
@@ -197,7 +195,8 @@ async def load_or_build_vector_store(
     """Open the notebooks' store at VS_PATH, building it from all documents if empty or reset."""
     embedding_model = OpenAIEmbeddings(model_name=EMBEDDING_MODEL)
     vector_store = ChromaDBVectorStore(db_path=str(VS_PATH))
-    if reset or vector_store.collection.count() == 0:
+    # Stores from older versions use L2 and 1024-dim embeddings; rebuild them.
+    if reset or vector_store.collection.count() == 0 or vector_store.space != "cosine":
         vector_store = await build_vector_store(
             load_chunks(), embedding_model, db_path=VS_PATH, reset=True
         )
