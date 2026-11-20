@@ -1,6 +1,7 @@
-import io
+import asyncio
 import base64
-from typing import Any, Optional, cast
+import io
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -24,8 +25,8 @@ from conversational_toolkit.embeddings.base import EmbeddingsModel
 
 @dataclass
 class Qwen3VLForEmbeddingOutput(ModelOutput):
-    last_hidden_state: Optional[torch.FloatTensor] = None
-    attention_mask: Optional[torch.Tensor] = None
+    last_hidden_state: torch.FloatTensor | None = None
+    attention_mask: torch.Tensor | None = None
 
 
 class Qwen3VLForEmbedding(Qwen3VLPreTrainedModel):
@@ -40,16 +41,16 @@ class Qwen3VLForEmbedding(Qwen3VLPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[Any] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        pixel_values: Optional[torch.Tensor] = None,
-        pixel_values_videos: Optional[torch.FloatTensor] = None,
-        image_grid_thw: Optional[torch.LongTensor] = None,
-        video_grid_thw: Optional[torch.LongTensor] = None,
-        cache_position: Optional[torch.LongTensor] = None,
+        input_ids: torch.LongTensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_values: Any | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
+        pixel_values: torch.Tensor | None = None,
+        pixel_values_videos: torch.FloatTensor | None = None,
+        image_grid_thw: torch.LongTensor | None = None,
+        video_grid_thw: torch.LongTensor | None = None,
+        cache_position: torch.LongTensor | None = None,
         **kwargs,
     ) -> Qwen3VLForEmbeddingOutput:
         outputs = self.model(
@@ -79,13 +80,12 @@ class _Qwen3VLEmbedder:
         instruction: str = "Represent the user's input.",
         max_length: int = 8192,
         normalize: bool = True,
-        output_dim: Optional[int] = None,
-        torch_dtype: Optional[torch.dtype] = None,
-        attn_implementation: Optional[str] = None,
-        device: Optional[str] = None,
+        output_dim: int | None = None,
+        dtype: torch.dtype | None = None,
+        attn_implementation: str | None = None,
+        device: str | None = None,
         min_pixels: int = 4 * (16 * 2) * (16 * 2),
         max_pixels: int = 1800 * (16 * 2) * (16 * 2),
-        trust_remote_code: bool = True,
     ):
         self.max_length = max_length
         self.instruction = instruction
@@ -99,25 +99,18 @@ class _Qwen3VLEmbedder:
         self.device = torch.device(device)
 
         model_kwargs: dict[str, Any] = {}
-        if torch_dtype is not None:
-            model_kwargs["torch_dtype"] = torch_dtype
+        if dtype is not None:
+            model_kwargs["dtype"] = dtype
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        # device_map loads the weights straight onto the target device (no separate .to() call needed).
-        self.model = Qwen3VLForEmbedding.from_pretrained(
-            model_name_or_path,
-            trust_remote_code=trust_remote_code,
-            device_map=self.device,
-            **model_kwargs,
-        )
+        self.model = Qwen3VLForEmbedding.from_pretrained(model_name_or_path, device_map=self.device, **model_kwargs)
         self.model.eval()
 
         self.processor = Qwen3VLProcessor.from_pretrained(model_name_or_path, padding_side="right")
 
     @staticmethod
     def _pool_last_token(hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
-        # pick the final "1" position per row in attention_mask
         flipped = attention_mask.flip(dims=[1])
         last_one_from_end = flipped.argmax(dim=1)
         col = attention_mask.shape[1] - last_one_from_end - 1
@@ -127,9 +120,9 @@ class _Qwen3VLEmbedder:
     def _format_conversation(
         self,
         *,
-        text: Optional[str] = None,
-        image: Optional[Image.Image] = None,
-        instruction: Optional[str] = None,
+        text: str | None = None,
+        image: Image.Image | None = None,
+        instruction: str | None = None,
     ) -> list[dict]:
         inst = (instruction or self.instruction).strip()
         if inst and inst[-1] not in ".!?;:":
@@ -192,8 +185,8 @@ class _Qwen3VLEmbedder:
         self,
         items: list[dict],
         *,
-        normalize: Optional[bool] = None,
-        output_dim: Optional[int] = None,
+        normalize: bool | None = None,
+        output_dim: int | None = None,
     ) -> torch.Tensor:
         conversations = [
             self._format_conversation(
@@ -246,8 +239,12 @@ def _sniff_mime_type(s: str) -> str:
     return "text/plain"
 
 
+def _image_item(b64: str) -> dict[str, Any]:
+    return {"image": Image.open(io.BytesIO(_b64decode(b64))).convert("RGB"), "text": ""}
+
+
 class Qwen3VLEmbeddings(EmbeddingsModel):
-    # TODO: Update Embedding main class to support images as well, so not inheriting it now.
+    """Qwen3-VL text and image embeddings in a shared space."""
 
     def __init__(
         self,
@@ -256,7 +253,7 @@ class Qwen3VLEmbeddings(EmbeddingsModel):
         instruction: str = "Represent the user's input.",
         output_dim: int | None = None,
         normalize: bool = True,
-        torch_dtype: torch.dtype | None = None,
+        dtype: torch.dtype | None = None,
         attn_implementation: str | None = None,
         device: str | None = None,
     ):
@@ -265,31 +262,20 @@ class Qwen3VLEmbeddings(EmbeddingsModel):
             instruction=instruction,
             output_dim=output_dim,
             normalize=normalize,
-            torch_dtype=torch_dtype,
+            dtype=dtype,
             attn_implementation=attn_implementation,
             device=device,
         )
 
+    async def _encode(self, items: list[dict]) -> np.ndarray:
+        emb = await asyncio.to_thread(self.embedder.encode, items)
+        return emb.cpu().numpy()
+
     async def get_text_embeddings(self, texts: str | list[str]) -> np.ndarray:
-        if isinstance(texts, str):
-            texts = [texts]
-        items = [{"text": t} for t in texts]
-        emb = self.embedder.encode(items)
-        return emb.detach().cpu().numpy()
+        return await self._encode([{"text": t} for t in ([texts] if isinstance(texts, str) else texts)])
 
     async def get_image_embeddings(self, images: str | list[str]) -> np.ndarray:
-        if isinstance(images, str):
-            images = [images]
-
-        decoded_images: list[Image.Image] = []
-        for img_base64 in images:
-            img_data = _b64decode(img_base64)
-            img = Image.open(io.BytesIO(img_data)).convert("RGB")
-            decoded_images.append(img)
-
-        items = [{"image": im, "text": ""} for im in decoded_images]
-        emb = self.embedder.encode(items)
-        return emb.detach().cpu().numpy()
+        return await self._encode([_image_item(img) for img in ([images] if isinstance(images, str) else images)])
 
     async def get_embeddings(self, chunks: str | list[str] | Chunk | list[Chunk]) -> np.ndarray:  # type: ignore[override]
         chunk_list: list[Chunk]
@@ -297,23 +283,20 @@ class Qwen3VLEmbeddings(EmbeddingsModel):
             chunk_list = [Chunk(content=chunks, mime_type="text/plain", title="Query")]
         elif isinstance(chunks, Chunk):
             chunk_list = [chunks]
-        elif isinstance(chunks, list) and all(isinstance(c, str) for c in chunks):
+        elif all(isinstance(c, str) for c in chunks):
             chunk_list = [
                 Chunk(content=c, mime_type=_sniff_mime_type(c), title=f"Chunk {i}")
                 for i, c in enumerate(cast(list[str], chunks))
             ]
         else:
-            chunk_list = chunks  # type: ignore[assignment]
+            chunk_list = cast(list[Chunk], chunks)
 
         items: list[dict] = []
         for chunk in chunk_list:
             if chunk.mime_type.startswith("text"):
                 items.append({"text": chunk.content})
             elif chunk.mime_type.startswith("image"):
-                img = Image.open(io.BytesIO(_b64decode(chunk.content))).convert("RGB")
-                items.append({"image": img, "text": ""})
+                items.append(_image_item(chunk.content))
             else:
                 raise ValueError(f"Unknown Data Type: {chunk.mime_type}")
-
-        emb = self.embedder.encode(items)
-        return emb.detach().cpu().numpy()
+        return await self._encode(items)

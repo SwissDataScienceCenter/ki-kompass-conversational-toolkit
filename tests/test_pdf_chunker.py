@@ -1,47 +1,63 @@
-import os
 from pathlib import Path
 
 from PIL import Image
 
 from conversational_toolkit.chunking.pdf_chunker import PDFChunker
 
-MARKDOWN = "# Title\n\nIntro text.\n\n## Section\n\nMore text."
+MARKDOWN = """Preamble text
+wrapped over two lines.
+
+# Title
+
+Intro text.
+
+## Section
+
+| a | b |
+|---|---|
+| 1 | 2 |
+
+- first
+- second
+"""
 
 
 class FakePDFChunker(PDFChunker):
-    """Skips docling: returns fixed markdown and writes one image when asked to."""
+    """Skips docling: returns fixed markdown and one picture when asked for images."""
 
-    def _pdf2markdown(
-        self, file_path, engine=None, write_images=False, image_path=None
-    ):
-        if write_images and image_path:
-            Image.new("RGB", (4, 4)).save(Path(image_path) / "doc-picture-1.png")
-        return MARKDOWN
+    def _convert(self, file_path, engine, with_images):
+        pictures = [("doc-picture-1.png", Image.new("RGB", (4, 4)))]
+        return MARKDOWN, pictures if with_images else []
 
 
-def test_default_uses_temp_dir_and_cleans_up(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    chunks = FakePDFChunker().make_chunks("doc.pdf")
+def test_sections_preamble_and_images():
+    chunks = FakePDFChunker().make_chunks("dir/doc.pdf")
 
-    assert [c.mime_type for c in chunks] == [
-        "text/markdown",
-        "text/markdown",
-        "image/png",
+    assert [c.title for c in chunks] == [
+        "",
+        "# Title",
+        "## Section",
+        "doc-picture-1.png",
     ]
-    assert os.listdir(tmp_path) == []  # nothing like ./tmp is left behind
+    assert [c.mime_type for c in chunks] == ["text/markdown"] * 3 + ["image/png"]
+    assert chunks[0].content.strip() == "Preamble text wrapped over two lines."
+    assert chunks[2].metadata["chapters"] == ["# Title", "## Section"]
+    assert [c.metadata.get("chunk_index") for c in chunks] == [0, 1, 2, None]
+    assert {c.metadata.get("source_file") for c in chunks[:3]} == {"doc.pdf"}
 
 
-def test_explicit_image_path_keeps_images_and_ignores_existing_files(tmp_path):
+def test_tables_and_lists_keep_line_breaks():
+    section = FakePDFChunker().make_chunks("doc.pdf", write_images=False)[-1].content
+
+    assert "| a | b |\n|---|---|\n| 1 | 2 |" in section
+    assert "- first\n- second" in section
+
+
+def test_image_path_saves_pictures(tmp_path):
     image_dir = tmp_path / "images"
-    image_dir.mkdir()
-    Image.new("RGB", (4, 4)).save(image_dir / "other.png")
+    FakePDFChunker().make_chunks("doc.pdf", image_path=str(image_dir))
 
-    chunks = FakePDFChunker().make_chunks("doc.pdf", image_path=str(image_dir))
-
-    assert [c.title for c in chunks if c.mime_type.startswith("image/")] == [
-        "doc-picture-1.png"
-    ]
-    assert sorted(os.listdir(image_dir)) == ["doc-picture-1.png", "other.png"]
+    assert [p.name for p in image_dir.iterdir()] == ["doc-picture-1.png"]
 
 
 def test_without_images_returns_only_text(tmp_path, monkeypatch):
@@ -49,7 +65,7 @@ def test_without_images_returns_only_text(tmp_path, monkeypatch):
     chunks = FakePDFChunker().make_chunks("doc.pdf", write_images=False)
 
     assert all(c.mime_type == "text/markdown" for c in chunks)
-    assert os.listdir(tmp_path) == []
+    assert list(Path(tmp_path).iterdir()) == []
 
 
 def test_docling_converter_is_created_once_per_image_setting(monkeypatch):

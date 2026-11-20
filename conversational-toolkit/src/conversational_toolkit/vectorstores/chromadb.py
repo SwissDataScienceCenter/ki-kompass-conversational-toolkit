@@ -1,143 +1,82 @@
 import json
-import chromadb
 from typing import Any
+
+import chromadb
 import numpy as np
 from numpy.typing import NDArray
 
 from conversational_toolkit.chunking.base import Chunk
 from conversational_toolkit.utils.database import generate_uid
-from conversational_toolkit.vectorstores.base import VectorStore, ChunkMatch, ChunkRecord
+from conversational_toolkit.vectorstores.base import ChunkMatch, ChunkRecord, VectorStore
+
+
+def _encode_metadata(value: Any) -> Any:
+    return json.dumps(value) if isinstance(value, list | dict) else value
+
+
+def _decode_metadata(value: Any) -> Any:
+    if isinstance(value, str) and value[:1] in ("[", "{"):
+        try:
+            return json.loads(value)
+        except ValueError:
+            pass
+    return value
 
 
 class ChromaDBVectorStore(VectorStore):
-    def __init__(self, db_path: str, collection_name: str = "default_collection"):
-        """
-        Initialize the ChromaDB vector store.
+    """Persistent ChromaDB collection. New collections use cosine distance; list/dict metadata is stored as JSON."""
 
-        :param db_path: Path to store the ChromaDB database.
-        :param collection_name: Name of the collection within the database.
-        """
+    def __init__(self, db_path: str, collection_name: str = "default_collection"):
         self.client = chromadb.PersistentClient(path=db_path)
-        self.collection = self.client.get_or_create_collection(name=collection_name)
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name, configuration={"hnsw": {"space": "cosine"}}
+        )
+        hnsw = self.collection.configuration.get("hnsw") or {}
+        self._space = hnsw.get("space", "l2")
+
+    def _similarity(self, distance: float) -> float:
+        # Chroma's l2 is the squared distance, which is 2 - 2 * cosine for normalised embeddings.
+        return 1 - distance / 2 if self._space == "l2" else 1 - distance
+
+    def _record(self, chunk_id: str, document: str, metadata: Any) -> dict[str, Any]:
+        meta = {k: _decode_metadata(v) for k, v in (metadata or {}).items()}
+        return {
+            "id": chunk_id,
+            "title": str(meta.get("title", "")),
+            "mime_type": str(meta.get("mime_type", "")),
+            "content": document,
+            "metadata": meta,
+            "embedding": [],
+        }
 
     async def insert_chunks(self, chunks: list[Chunk], embedding: NDArray[np.float64]) -> None:
-        """
-        Insert chunks into ChromaDB.
-
-        :param chunks: List of document chunks
-        :param embedding: Corresponding embedding vectors
-        """
-        documents = []
-        metadatas = []
-        ids = []
-
-        for chunk, _ in zip(chunks, embedding):
-            doc_id = str(generate_uid())
-            documents.append(chunk.content)
-            raw_meta = {"title": chunk.title, "mime_type": chunk.mime_type, **chunk.metadata}
-            # ChromaDB only accepts str/int/float/bool — serialize anything else to JSON
-            safe_meta = {k: json.dumps(v) if isinstance(v, (list, dict)) else v for k, v in raw_meta.items()}
-            metadatas.append(safe_meta)
-            ids.append(doc_id)
-
         self.collection.add(
-            ids=ids,
-            embeddings=embedding.tolist(),  # type: ignore
-            metadatas=metadatas,  # type: ignore
-            documents=documents,
+            ids=[generate_uid() for _ in chunks],
+            embeddings=embedding.tolist(),  # type: ignore[arg-type]
+            metadatas=[
+                {k: _encode_metadata(v) for k, v in {"title": c.title, "mime_type": c.mime_type, **c.metadata}.items()}
+                for c in chunks
+            ],
+            documents=[c.content for c in chunks],
         )
 
     async def get_chunks_by_embedding(
         self, embedding: NDArray[np.float64], top_k: int, filters: dict[str, Any] | None = None
     ) -> list[ChunkMatch]:
-        """
-        Retrieve chunks most similar to the given embedding.
-
-        :param embedding: Query embedding
-        :param top_k: Number of results to return
-        :param filters: Optional filters for metadata
-        """
-        results = self.collection.query(query_embeddings=embedding.tolist(), n_results=top_k, where=filters)  # type: ignore
-
-        chunk_matches = []
-        if results and results["ids"]:
-            for i in range(len(results["ids"][0])):
-                metadata: dict[str, Any] = dict(results["metadatas"][0][i]) if results["metadatas"] else {}
-                chunk_matches.append(
-                    ChunkMatch(
-                        id=results["ids"][0][i],
-                        title=str(metadata.get("title", "")),  # type: ignore[reportCallIssue]
-                        mime_type=str(metadata.get("mime_type", "")),  # type: ignore[reportCallIssue]
-                        metadata=metadata,
-                        content=results["documents"][0][i] if results["documents"] else "",  # type: ignore[reportCallIssue]
-                        embedding=[],
-                        score=results["distances"][0][i] if results["distances"] else 0.0,
-                    )
-                )
-
-        return chunk_matches
+        results = self.collection.query(query_embeddings=embedding.tolist(), n_results=top_k, where=filters)  # type: ignore[arg-type]
+        documents, metadatas, distances = results["documents"], results["metadatas"], results["distances"]
+        assert documents is not None and metadatas is not None and distances is not None  # included by default
+        return [
+            ChunkMatch(**self._record(i, doc, meta), score=self._similarity(dist))
+            for i, doc, meta, dist in zip(results["ids"][0], documents[0], metadatas[0], distances[0], strict=True)
+        ]
 
     async def get_chunks_by_filter(self, filters: dict[str, Any] | None = None) -> list[ChunkRecord]:
-        """
-        Return all chunks matching the given metadata filters (no embedding needed).
-
-        Uses ChromaDB's 'collection.get(where=filters)'. Supports ChromaDB filter
-        operators: '$eq', '$ne', '$gt', '$lt', '$gte', '$lte', '$and', '$or'.
-
-        Example — fetch all chunks from a specific file at a given index:
-            filters = {
-                "$and": [
-                    {"source_file": {"$eq": "report.pdf"}},
-                    {"chunk_index": {"$eq": 3}},
-                ]
-            }
-        """
-        if not filters:
-            results = self.collection.get()
-        else:
-            results = self.collection.get(where=filters)  # type: ignore[arg-type]
-
-        chunk_records = []
-        if results and results["ids"]:
-            for i in range(len(results["ids"])):
-                metadata: dict[str, Any] = dict(results["metadatas"][i]) if results["metadatas"] else {}
-                chunk_records.append(
-                    ChunkRecord(
-                        id=results["ids"][i],
-                        title=str(metadata.get("title", "")),  # type: ignore[reportCallIssue]
-                        mime_type=str(metadata.get("mime_type", "")),  # type: ignore[reportCallIssue]
-                        content=results["documents"][i] if results["documents"] else "",  # type: ignore[reportCallIssue]
-                        metadata=metadata,
-                        embedding=[],
-                    )
-                )
-        return chunk_records
-
-    async def get_chunks_by_ids(self, chunk_ids: int | list[int]) -> list[Chunk]:
-        """
-        Retrieve chunks by their IDs.
-
-        :param chunk_ids: A single ID or a list of IDs
-        :return: List of retrieved chunks
-        """
-        if isinstance(chunk_ids, int):
-            chunk_ids = [str(chunk_ids)]  # type: ignore
-        else:
-            chunk_ids = [str(cid) for cid in chunk_ids]  # type: ignore
-
-        results = self.collection.get(ids=chunk_ids)  # type: ignore
-
-        chunks = []
-        if results and results["ids"]:
-            for i in range(len(results["ids"])):
-                metadata: dict[str, Any] = dict(results["metadatas"][i]) if results["metadatas"] else {}
-                chunks.append(
-                    Chunk(
-                        title=str(metadata.get("title", "")),
-                        mime_type=str(metadata.get("mime_type", "")),
-                        content=results["documents"][i] if results["documents"] else "",
-                        metadata=metadata,
-                    )
-                )
-
-        return chunks
+        """Return all chunks matching a Chroma 'where' filter, e.g. '{"source_file": {"$eq": "a.pdf"}}'."""
+        results = self.collection.get(where=filters or None)  # type: ignore[arg-type]
+        documents, metadatas = results["documents"], results["metadatas"]
+        assert documents is not None and metadatas is not None  # included by default
+        return [
+            ChunkRecord(**self._record(i, doc, meta))
+            for i, doc, meta in zip(results["ids"], documents, metadatas, strict=True)
+        ]

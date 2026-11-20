@@ -1,19 +1,14 @@
 from pathlib import Path
 
+from PIL import Image
+
 from conversational_toolkit.chunking.pdf_chunker import MarkdownConverterEngine, PDFChunker
 
 
 class MarkdownChunker(PDFChunker):
-    """Chunks Markdown and plain-text (.md, .txt) files using the same
-    header-based logic as PDFChunker, but skips the PDF-to-Markdown
-    conversion step by reading the file directly as UTF-8 text.
-    """
+    """Chunks .md and .txt files like 'PDFChunker', reading them as UTF-8 instead of converting."""
 
-    def _pdf2markdown(
-        self,
-        file_path: str,
-        engine: MarkdownConverterEngine = MarkdownConverterEngine.DOCLING,
-        write_images: bool = False,
-        image_path: str | None = None,
-    ) -> str:
-        return Path(file_path).read_text(encoding="utf-8")
+    def _convert(
+        self, file_path: str, engine: MarkdownConverterEngine, with_images: bool
+    ) -> tuple[str, list[tuple[str, Image.Image]]]:
+        return Path(file_path).read_text(encoding="utf-8"), []

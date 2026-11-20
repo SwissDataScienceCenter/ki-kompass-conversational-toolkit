@@ -1,16 +1,3 @@
-"""
-Conversational toolkit controller (Facade).
-
-'ConversationalToolkitController' is the single entry point for all application logic. It coordinates five pluggable database repositories and an agent to handle the full lifecycle of a conversation turn: user registration, conversation and thread management, agent invocation, streaming, and persistence of messages, sources, and reactions.
-
-The two public entry points for message processing are:
-
-    'process_new_message'        - non-streaming, returns the final 'ClientMessage'.
-    'process_new_message_stream' - async generator that yields partial content chunks during generation, then the final persisted message with sources.
-
-'ClientMessage' extends 'Message' with the API-response fields ('sources', 'reaction', 'follow_up_questions') that the frontend needs but that are not stored directly on the message record.
-"""
-
 import json
 from collections.abc import AsyncGenerator, Sequence
 from typing import Any
@@ -46,6 +33,8 @@ class ReactionInput(BaseModel):
 
 
 class ClientMessage(Message):
+    """A 'Message' with the sources, reaction and follow-ups the frontend shows."""
+
     sources: Sequence[Source]
     reaction: str | None
     follow_up_questions: Sequence[str] | None
@@ -62,6 +51,8 @@ DEFAULT_CONVERSATION_TITLE = "New Conversation"
 
 
 class ConversationalToolkitController:
+    """Runs the agent on user messages and persists conversations, messages, sources and reactions."""
+
     def __init__(
         self,
         conversation_db: ConversationDatabase,
@@ -275,7 +266,7 @@ class ConversationalToolkitController:
 
     async def delete_conversation(self, conversation_id: str) -> bool:
         messages = await self.message_db.get_messages_by_conversation_id(conversation_id)
-        for message in messages:
+        for message in sorted(messages, key=lambda m: m.create_timestamp, reverse=True):
             sources = await self.source_db.get_sources_by_message_id(message_id=message.id)
             await self.source_db.delete_sources([source.id for source in sources])
 

@@ -1,6 +1,4 @@
-from abc import ABC
-
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, FastAPI, HTTPException, Request, Response, status
 from jose import JWTError, jwt  # type: ignore[import-untyped]
 
 from conversational_toolkit.api.auth.base import AuthProvider
@@ -8,7 +6,9 @@ from conversational_toolkit.conversation_database.controller import Conversation
 from conversational_toolkit.utils.database import generate_uid
 
 
-class SessionCookieProvider(AuthProvider, ABC):
+class SessionCookieProvider(AuthProvider):
+    """Anonymous users identified by a JWT cookie that '/auth/refresh' issues on first visit."""
+
     def __init__(
         self,
         controller: ConversationalToolkitController,
@@ -22,7 +22,7 @@ class SessionCookieProvider(AuthProvider, ABC):
         self.env = env
         self.cookie_name = "access_token"
 
-    def bind_to_app(self, app):
+    def bind_to_app(self, app: FastAPI) -> None:
         router = APIRouter(prefix="/auth")
 
         @router.post("/refresh")
@@ -56,4 +56,4 @@ class SessionCookieProvider(AuthProvider, ABC):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing subject claim")
             return str(sub)
         except JWTError as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {e}") from e

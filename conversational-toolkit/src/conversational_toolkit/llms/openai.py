@@ -23,11 +23,7 @@ from conversational_toolkit.utils.metadata_provider import MetadataProvider
 
 
 def message_to_openai(msg: LLMMessage) -> ChatCompletionMessageParam:
-    # TODO Currently, assumes images are always base64 and always interpreted as PNG -> change in future
-    message: dict[str, Any] = {
-        "role": msg.role.value,
-    }
-    message["content"] = []
+    message: dict[str, Any] = {"role": msg.role.value, "content": []}
 
     for content in msg.content:
         if "text" in content.type and content.text is not None:
@@ -35,8 +31,8 @@ def message_to_openai(msg: LLMMessage) -> ChatCompletionMessageParam:
         elif "image" in content.type and content.image_url is not None:
             try:
                 image_bytes = base64.b64decode(content.image_url)
-            except Exception:
-                raise ValueError("image_url must be a valid base64-encoded string.")
+            except ValueError as e:
+                raise ValueError("image_url must be a valid base64-encoded string.") from e
             if not image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise NotImplementedError(
                     "Only PNG images are supported. Other formats (JPEG, WEBP, etc.) are not yet implemented."
@@ -79,15 +75,14 @@ class OpenAILLM(LLM):
         tools: list[Tool] | None = None,
         tool_choice: Literal["none", "auto", "required"] | None = None,
         response_format: completion_create_params.ResponseFormat | None = None,
-        openai_api_key: str | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
     ) -> None:
-        # NOTE: Currently only supports text output. If OpenAI chat completions API will also return images in addition to the text content, the response parsing below will need to handle image content.
-
         super().__init__()
         if response_format is None:
             response_format = {"type": "text"}
 
-        self.client = AsyncOpenAI(api_key=openai_api_key)
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model_name
         self.temperature = temperature
         self.seed = seed
@@ -98,26 +93,19 @@ class OpenAILLM(LLM):
             f"OpenAI LLM loaded: {model_name}; temperature: {temperature}; seed: {seed}; tools: {tools}; tool_choice: {tool_choice}; response_format: {response_format}"
         )
 
-    async def generate(self, conversation: list[LLMMessage]) -> LLMMessage:
-        """Generate a completion for the given conversation."""
+    def _request_kwargs(self, conversation: list[LLMMessage]) -> dict[str, Any]:
+        return {
+            "model": self.model,
+            "messages": [message_to_openai(msg) for msg in conversation],
+            "temperature": self.temperature,
+            "seed": self.seed,
+            "tools": cast(list[ChatCompletionToolParam], [t.json_schema() for t in self.tools]) if self.tools else omit,
+            "tool_choice": self.tool_choice if self.tool_choice is not None else omit,
+            "response_format": self.response_format,
+        }
 
-        messages_as_openai = [message_to_openai(msg) for msg in conversation]
-        completion = await self.client.chat.completions.create(
-            model=self.model,
-            messages=messages_as_openai,
-            temperature=self.temperature,
-            seed=self.seed,
-            tools=(
-                cast(
-                    list[ChatCompletionToolParam],
-                    [tool.json_schema() for tool in self.tools],
-                )
-                if self.tools
-                else omit
-            ),
-            tool_choice=self.tool_choice if self.tool_choice is not None else omit,
-            response_format=self.response_format,
-        )
+    async def generate(self, conversation: list[LLMMessage]) -> LLMMessage:
+        completion = await self.client.chat.completions.create(**self._request_kwargs(conversation))
         logger.debug(f"Completion: {completion}")
         logger.info(f"LLM Usage: {completion.usage}")
 
@@ -161,25 +149,8 @@ class OpenAILLM(LLM):
                 tool_call.function.arguments += tool_call_chunk.function.arguments
 
     async def generate_stream(self, conversation: list[LLMMessage]) -> AsyncGenerator[LLMMessage, None]:
-        messages_as_openai = [message_to_openai(msg) for msg in conversation]
-
         response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=messages_as_openai,
-            temperature=self.temperature,
-            seed=self.seed,
-            tools=(
-                cast(
-                    list[ChatCompletionToolParam],
-                    [tool.json_schema() for tool in self.tools],
-                )
-                if self.tools
-                else omit
-            ),
-            tool_choice=self.tool_choice if self.tool_choice is not None else omit,
-            stream=True,
-            response_format=self.response_format,
-            stream_options={"include_usage": True},
+            **self._request_kwargs(conversation), stream=True, stream_options={"include_usage": True}
         )
 
         parsed_tool_calls: list[ToolCall] = []
@@ -187,7 +158,7 @@ class OpenAILLM(LLM):
 
         async for chunk in response:
             last_chunk = chunk
-            if not chunk.choices:  # Last chunk has empty choices list
+            if not chunk.choices:
                 continue
             if chunk.choices[0].delta.content:
                 yield LLMMessage(

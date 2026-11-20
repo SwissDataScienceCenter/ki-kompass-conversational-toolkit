@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from conversational_toolkit.llms.base import LLM
@@ -32,25 +33,24 @@ class RetrieverTool(Tool):
         history = args.get("_history", [])
         query = str(args.get("_query"))
 
-        if len(history) > 0:
+        if history:
             query = await make_query_standalone(self.llm, history, query)
+        queries = [query]
         if self.number_query_expansion > 0:
-            queries = await query_expansion(query, self.llm, self.number_query_expansion)
-        else:
-            queries = [query]
+            queries += await query_expansion(query, self.llm, self.number_query_expansion)
 
-        retrieved = [await self.retriever.retrieve(q) for q in queries]
+        retrieved = await asyncio.gather(*(self.retriever.retrieve(q) for q in queries))
         sources = reciprocal_rank_fusion(retrieved)[: self.retriever.top_k]
-
-        json_chunks = [
-            {
-                "id": source.id,
-                "title": source.title,
-                "content": source.content,
-                "mime_type": source.mime_type,
-                "metadata": {**(source.metadata if source.metadata else {}), "id": source.id},
-            }
-            for source in sources
-        ]
-
-        return {"_sources": json_chunks}
+        return {
+            "result": "\n\n".join(f"<source id='{s.id}'>{s.content}</source>" for s in sources),
+            "_sources": [
+                {
+                    "id": s.id,
+                    "title": s.title,
+                    "content": s.content,
+                    "mime_type": s.mime_type,
+                    "metadata": {**s.metadata, "id": s.id},
+                }
+                for s in sources
+            ],
+        }

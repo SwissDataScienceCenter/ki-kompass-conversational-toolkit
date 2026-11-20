@@ -5,13 +5,7 @@ from conversational_toolkit.chunking.base import Chunk, Chunker
 
 
 class ExcelChunker(Chunker):
-    """
-    Chunks Excel workbooks (.xlsx, .xls) into one Chunk per sheet.
-
-    Each sheet is converted to a Markdown table where the first row is treated
-    as the header. Empty sheets are skipped. Metadata includes the sheet name,
-    row count, and column count.
-    """
+    """One markdown-table chunk per non-empty sheet; the first non-empty row is the header."""
 
     def make_chunks(self, file_path: str) -> list[Chunk]:
         try:
@@ -40,9 +34,7 @@ class ExcelChunker(Chunker):
             ]
             for row in rows[1:]:
                 cells = [str(cell) if cell is not None else "" for cell in row]
-                # Pad shorter rows to match header length
-                while len(cells) < len(header):
-                    cells.append("")
+                cells += [""] * (len(header) - len(cells))
                 lines.append("| " + " | ".join(cells) + " |")
 
             chunks.append(

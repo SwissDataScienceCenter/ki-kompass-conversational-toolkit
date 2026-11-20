@@ -13,16 +13,11 @@ from conversational_toolkit.utils.metadata_provider import MetadataProvider
 def message_to_ollama(msg: LLMMessage) -> dict[str, Any]:
     message: dict[str, Any] = {
         "role": msg.role,
+        "content": "".join(c.text or "" for c in msg.content if c.type == "text"),
     }
-
-    # Convert MessageContent list to Ollama format
-    if len(msg.content) == 1 and msg.content[0].type == "text":
-        message["content"] = msg.content[0].text or ""
-    else:
-        message["content"] = [
-            {"type": c.type, "text": c.text} if c.type == "text" else {"type": "image_url", "image_url": c.image_url}
-            for c in msg.content
-        ]
+    images = [c.image_url for c in msg.content if c.type == "image" and c.image_url]
+    if images:
+        message["images"] = images
 
     if msg.name:
         message["name"] = msg.name
@@ -52,7 +47,6 @@ class OllamaLLM(LLM):
         temperature: float = 0.5,
         seed: int = 42,
         tools: list[Tool] | None = None,
-        tool_choice: str | None = None,
         model_name: str = "llama3.1",
         response_format: Literal["json"] | None = None,
         host: str | None = None,
@@ -63,20 +57,22 @@ class OllamaLLM(LLM):
         self.temperature = temperature
         self.seed = seed
         self.tools = tools
-        self.tool_choice = tool_choice
         self.response_format: Literal["json"] | None = response_format
         logger.debug(
             f"Ollama LLM loaded: {model_name}; temperature: {temperature}; seed: {seed}; tools: {tools}; response_format: {response_format}"
         )
 
+    def _request_kwargs(self, conversation: list[LLMMessage]) -> dict[str, Any]:
+        return {
+            "model": self.model,
+            "messages": [message_to_ollama(msg) for msg in conversation],
+            "format": self.response_format,
+            "tools": [tool.json_schema() for tool in self.tools] if self.tools else None,
+            "options": {"temperature": self.temperature, "seed": self.seed},
+        }
+
     async def generate(self, conversation: list[LLMMessage]) -> LLMMessage:
-        completion: ChatResponse = await self.client.chat(
-            model=self.model,
-            messages=[message_to_ollama(msg) for msg in conversation],
-            format=self.response_format,
-            tools=[tool.json_schema() for tool in self.tools] if self.tools else None,
-            stream=False,
-        )
+        completion: ChatResponse = await self.client.chat(**self._request_kwargs(conversation), stream=False)
         logger.debug(f"Completion: {completion}")
         return LLMMessage(
             content=[MessageContent(type="text", text=completion.message.content or "")],
@@ -98,11 +94,7 @@ class OllamaLLM(LLM):
 
     async def generate_stream(self, conversation: list[LLMMessage]) -> AsyncGenerator[LLMMessage, None]:
         response: AsyncIterator[ChatResponse] = await self.client.chat(
-            model=self.model,
-            messages=[message_to_ollama(msg) for msg in conversation],
-            format=self.response_format,
-            tools=[tool.json_schema() for tool in self.tools] if self.tools else None,
-            stream=True,
+            **self._request_kwargs(conversation), stream=True
         )
 
         last_tool_call_sent = -1

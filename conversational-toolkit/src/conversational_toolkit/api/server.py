@@ -1,25 +1,27 @@
 import os
-from typing import Optional, Union
+from pathlib import Path
 
-from fastapi import FastAPI, __version__
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse, JSONResponse
 
+from conversational_toolkit import __version__
 from conversational_toolkit.api.auth.base import AuthProvider
 from conversational_toolkit.api.auth.session_cookie_provider import SessionCookieProvider
 from conversational_toolkit.api.routes.api import create_api_router
 from conversational_toolkit.conversation_database.controller import (
     ConversationalToolkitController,
 )
-from conversational_toolkit.utils.paths import Paths
+
+DIST_FOLDER = str(Path(__file__).parents[3] / "dist")
 
 
 def create_app(
     controller: ConversationalToolkitController,
-    auth_provider: Optional[AuthProvider] = None,
-    allow_origins=None,
-    dist_path: str = Paths.DIST_FOLDER,
+    auth_provider: AuthProvider | None = None,
+    allow_origins: list[str] | None = None,
+    dist_path: str = DIST_FOLDER,
     env: str = os.getenv("ENV", "local"),
 ) -> FastAPI:
     if auth_provider is None:
@@ -49,7 +51,7 @@ def create_app(
 
     @app.get("/", response_model=None)
     @app.get("/c/{path:path}", response_model=None)
-    async def root() -> Union[FileResponse, JSONResponse]:
+    async def root() -> FileResponse | JSONResponse:
         if os.path.isfile(os.path.join(dist_path, "index.html")):
             return FileResponse(os.path.join(dist_path, "index.html"))
         else:
