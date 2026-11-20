@@ -1,6 +1,6 @@
 #!/bin/bash
 # Renku session start: make the OpenAI key from the mounted data connector (a PolyBox or
-# SwitchDrive folder containing a file named openai_api_key) available as OPENAI_API_KEY in
+# SwitchDrive folder containing a file named openai_api_key or openai_api_key.txt) available as OPENAI_API_KEY in
 # terminals and notebook kernels. The key is read at each start and never copied.
 _kk_main() {
   local log="$HOME/setup_project.log" root="${RENKU_WORKING_DIR:-/home/renku/work}" key_file="" i
@@ -8,7 +8,7 @@ _kk_main() {
 
   # The data connector can take a few seconds to mount.
   for i in $(seq 1 20); do
-    key_file=$(find "$root" -maxdepth 3 -name openai_api_key -type f 2>/dev/null | head -n1)
+    key_file=$(find "$root" -maxdepth 3 -type f \( -name openai_api_key -o -name openai_api_key.txt \) 2>/dev/null | head -n1)
     [ -n "$key_file" ] && break
     sleep 1
   done

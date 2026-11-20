@@ -16,10 +16,10 @@ Throughout this guide, `acronym` is a short identifier for the workshop or partn
 ## 2. PolyBox folder with the key
 
 1. On [PolyBox](https://polybox.ethz.ch), create a folder `ki-kompass-acronym`.
-2. Inside it, create a text file named exactly `openai_api_key` that contains only the key.
+2. Inside it, create a plain text file named `openai_api_key` (PolyBox's "New text file" adds `.txt`; `openai_api_key.txt` works too). The file contains only the key on one line, for example `sk-proj-abc123...`: no quotes, no `OPENAI_API_KEY=` prefix. A trailing newline is fine.
 3. Share the folder with a public link: "Share link", then set a password (for example `acronymYYYY`) and an expiration date after the workshop. Copy the link.
 
-Anyone with the link and the password can read the key, so keep the password out of public channels and revoke the key after the event.
+**Participants can see the key.** The folder is mounted into every session, so anyone running a session can open `tokens/openai_api_key` or print `OPENAI_API_KEY`. This cannot be avoided when participants' own code calls OpenAI directly. Limit the damage instead: use the restricted OpenAI project, set a short expiration and a budget limit, use a new key per workshop, and revoke it right after the event.
 
 ## 3. Renku project
 
