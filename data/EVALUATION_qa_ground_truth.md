@@ -15,7 +15,7 @@
 - `data/ART_product_overview.xlsx`
 - `data/ART_product_catalog.pdf`
 
-**Failure mode to watch:** The system invents a description for the Lara Pallet — e.g. by extrapolating from other pallet documents — instead of stating the product does not exist.
+**Failure mode to watch:** The system invents a description for the Lara Pallet (e.g. by extrapolating from other pallet documents) instead of stating the product does not exist.
 
 ---
 
@@ -23,7 +23,7 @@
 
 **Question:** Can the 68% CO₂ reduction claim for the tesapack ECO & ULTRA STRONG ecoLogo (product 50-102) be included in a customer sustainability response?
 
-**Expected answer:** No — not as a stated fact. The 68% reduction per roll (versus Tesa's 2019 conventional baseline) comes from an internal comparative assessment by Tesa SE and has not been verified through an EPD or third-party LCA. Under PrimePack AG's supplier policy this is at best Level B evidence (Level C claims may not be communicated at all). All GWP / carbon footprint figures shared with customers must come from Level A evidence (a verified EPD). The claim may only be mentioned with the caveat *"self-declared, not independently verified."* The carbon neutrality goal (end of 2025 in the brochure text, 2026 in its timeline) is a forward-looking target, not a current status, and must be labelled as such.
+**Expected answer:** No, not as a stated fact. The 68% reduction per roll (versus Tesa's 2019 conventional baseline) comes from an internal comparative assessment by Tesa SE and has not been verified through an EPD or third-party LCA. Under PrimePack AG's supplier policy this is at best Level B evidence (Level C claims may not be communicated at all). All GWP / carbon footprint figures shared with customers must come from Level A evidence (a verified EPD). The claim may only be mentioned with the caveat *"self-declared, not independently verified."* The carbon neutrality goal (end of 2025 in the brochure text, 2026 in its timeline) is a forward-looking target, not a current status, and must be labelled as such.
 
 **Primary sources:**
 - `data/ART_supplier_brochure_tesa_ECO.pdf`
