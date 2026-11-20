@@ -77,6 +77,10 @@ export OPENAI_API_KEY="sk-..."
 uv run jupyter lab
 ```
 
+### Running the Notebooks on Renku
+
+In a workshop you get a link to a Renku project. Start a session there: everything is already installed and the OpenAI key is set up for you, so you can open `backend/notebooks/english/T01_baseline_rag.ipynb` right away. Organisers set this up following [docs/renku_workshop_setup.md](docs/renku_workshop_setup.md).
+
 ---
 
 ## Quick Start
@@ -220,6 +224,8 @@ Start with `T01_baseline_rag.ipynb`. It builds the notebooks' vector store (`bac
 │       └── vectorstores/                   # ChromaDB vector store
 │
 ├── data/                                   # Document corpus
+├── docs/                                   # Organiser guides (Renku workshop setup)
+├── init.d/                                 # Renku session start script (sets OPENAI_API_KEY)
 │
 └── frontend/                               # Next.js chat frontend
 ```
