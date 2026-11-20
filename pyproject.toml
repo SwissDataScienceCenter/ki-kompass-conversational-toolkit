@@ -6,16 +6,20 @@ requires-python = ">=3.12"
 dependencies = [
     "conversational-toolkit",
     "ki-kompass-rag",
+    # Listed here only to pin them to CPU wheels on Linux (see tool.uv.sources).
+    "torch",
+    "torchvision",
+    # Needed to run the notebooks (also in Renku sessions, which may skip dev groups).
+    "ipykernel>=7.0",
+    "jupyterlab>=4.6.6",
+    "langchain-openai>=1.0",
+    "python-dotenv>=1.0",
 ]
 
 [dependency-groups]
 dev = [
-    "ipykernel>=7.0",
-    "jupyterlab>=4.6.6",
-    "langchain-openai>=1.0",
     "pre-commit>=4.0",
     "pytest>=8.4.1",
-    "python-dotenv>=1.0",
     "ruff>=0.12.3,<0.13",
 ]
 
@@ -28,6 +32,15 @@ members = ["conversational-toolkit", "backend"]
 [tool.uv.sources]
 conversational-toolkit = { workspace = true }
 ki-kompass-rag = { workspace = true }
+# CPU-only torch on Linux (Renku sessions have no GPU); the default Linux wheels pull in
+# several GB of CUDA libraries. macOS and Windows keep the regular PyPI wheels.
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
