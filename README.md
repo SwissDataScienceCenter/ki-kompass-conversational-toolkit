@@ -156,9 +156,9 @@ Package details: [backend/README.md](backend/README.md), [conversational-toolkit
 ## Development
 
 ```bash
-uv run pre-commit install    # ruff, nbstripout and file checks on every commit
+uv run pre-commit install    # ruff, mypy, nbstripout and file checks on every commit
 make test                    # uv run pytest -q
-make lint                    # ruff check and ruff format --check
+make lint                    # ruff check, ruff format --check, mypy
 ```
 
 CI (`.github/workflows/tests.yml`) runs ruff and pytest on Python 3.12 and 3.13. Pre-commit strips notebook outputs. Use branch prefixes `feature/`, `fix/`, `docs/` or `data/`. When you add a document to `data/`, follow the prefix convention and add it to the tables above.

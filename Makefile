@@ -15,3 +15,4 @@ test:
 lint:
 	uv run ruff check
 	uv run ruff format --check
+	uv run mypy conversational-toolkit/src backend/src

@@ -30,4 +30,6 @@ jobs:
 
     - run: uv run ruff check
 
+    - run: uv run mypy conversational-toolkit/src backend/src
+
     - run: uv run pytest -v
