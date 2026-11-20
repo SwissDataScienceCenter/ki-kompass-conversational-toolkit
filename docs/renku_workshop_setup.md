@@ -6,7 +6,7 @@ Throughout this guide, `acronym` is a short identifier for the workshop or partn
 
 ## 1. OpenAI API key
 
-1. Go to the OpenAI Platform and select the project `ei26-02_educationgeneral_gpt-4o-mini`. It allows `gpt-4o-mini`, `text-embedding-3-small` and GPT 6 Luna, which covers everything the notebooks use. If you don't have access, ask support@datascience.ch.
+1. Go to the OpenAI Platform and select the project `ei26-02_educationgeneral_gpt-4o-mini`. It allows `gpt-4o-mini` and `text-embedding-3-small`, which covers everything the notebooks use. If you don't have access, ask support@datascience.ch.
 2. Under "API Keys", create a new secret key:
    - Name: `ACRONYM_DDMMYYYY` (date of the event).
    - Expiration: the evening of the event or the day after.
@@ -19,7 +19,7 @@ Throughout this guide, `acronym` is a short identifier for the workshop or partn
 2. Inside it, create a plain text file named `openai_api_key` (PolyBox's "New text file" adds `.txt`; `openai_api_key.txt` works too). The file contains only the key on one line, for example `sk-proj-abc123...`: no quotes, no `OPENAI_API_KEY=` prefix. A trailing newline is fine.
 3. Share the folder with a public link: "Share link", then set a password (for example `acronymYYYY`) and an expiration date after the workshop. Copy the link.
 
-**Participants can see the key.** The folder is mounted into every session, so anyone running a session can open `tokens/openai_api_key` or print `OPENAI_API_KEY`. This cannot be avoided when participants' own code calls OpenAI directly. Limit the damage instead: use the restricted OpenAI project, set a short expiration and a budget limit, use a new key per workshop, and revoke it right after the event.
+Use the restricted OpenAI project, a short expiration and a budget limit, create a new key for each workshop, and revoke it right after the event.
 
 ## 3. Renku project
 

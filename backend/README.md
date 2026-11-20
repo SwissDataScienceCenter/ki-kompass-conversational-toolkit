@@ -1,175 +1,72 @@
-# Backend RAG Pipeline
+# ki_kompass_rag
 
-This package (`ki_kompass_rag`) contains the notebooks and the supporting Python modules that run the RAG pipeline for the PrimePack AG sustainability use case.
+The PrimePack AG application of `conversational_toolkit`: the pipeline modules the notebooks import, the script that builds the chat app's vector stores, and the FastAPI chat backend. Setup and the notebook overview are in the [root README](../README.md).
 
----
-
-## Package structure
+## Layout
 
 ```
 backend/
-├── db/                                      # Vector stores and conversation data (created at runtime)
-│   ├── vs_text/                             # ChromaDB collection for text chunks (OpenAI embeddings)
-│   ├── vs_image/                            # ChromaDB collection for image chunks (Qwen3-VL embeddings)
-│   └── data_vs.db/                          # ChromaDB collection for the baseline RAG pipeline
-├── notebooks/                               # Workshop notebooks
-│   ├── english/                             # T01_baseline_rag ... T14_rag_subagent
-│   └── german/                              # German versions (same file names)
+├── notebooks/english/        T01 to T14
+├── db/                       created at runtime, git-ignored
+│   ├── data_vs.db/           notebook and CLI store (text, OpenAI embeddings)
+│   ├── vs_text/              chat app text store (OpenAI embeddings)
+│   ├── vs_image/             chat app image store (Qwen3-VL embeddings)
+│   └── *.json                chat app conversations, messages, reactions, sources, users
 └── src/ki_kompass_rag/
-    ├── baseline_rag.py             # Five-step RAG pipeline (chunking, embedding, retrieval, generation)
-    ├── build_app_db.py             # Builds the chat app's text and image vector stores
-    ├── ingestion.py                # Parser comparison, chunking utilities, token analysis
-    ├── evaluation.py               # Shared EVALUATION_QUERIES with ground-truth answers
-    ├── advanced_retrieval.py       # BM25, hybrid, metadata-filter retrieval
-    └── main.py                              # FastAPI server entry point (controller + frontend)
+    ├── __init__.py           loads <repo>/.env.local
+    ├── baseline_rag.py       paths, build_llm, load_chunks, vector store, RAG agent, ask, CLI
+    ├── build_app_db.py       builds vs_text and vs_image for the chat app
+    ├── main.py               FastAPI chat backend
+    ├── ingestion.py          chunking strategies and chunk-size statistics (T02)
+    ├── evaluation.py         EVALUATION_QUERIES with ground-truth answers (T04)
+    ├── advanced_retrieval.py BM25, hybrid and metadata-filter retrieval (T07)
+    ├── tool_agents.py        example tools and RAG-as-a-tool wrappers (T10 to T14)
+    └── utils/json.py         parse_llm_json_stream for partial JSON from a stream
 ```
 
----
+## baseline_rag
 
-## Building the chat app's vector stores (`build_app_db.py`)
+| Name | Purpose |
+|---|---|
+| `ROOT`, `DATA_DIR`, `DB_DIR`, `VS_PATH` | Repository root, `data/`, `backend/db/` (override with `DB_DIR`), `DB_DIR/data_vs.db` |
+| `build_llm(backend, model_name=None, ...)` | LLM for `openai`, `ollama` or `qwen` |
+| `load_chunks(max_files=None, with_images=False)` | Chunk every supported file in `data/` except `EVALUATION_*`; skips files over 20 MB |
+| `build_vector_store(chunks, embedding_model, db_path, reset)` | Embed chunks into a ChromaDB store; does nothing if the store is non-empty and `reset` is false |
+| `load_or_build_vector_store(reset=False)` | Open `VS_PATH`, building it from all documents if it is empty |
+| `inspect_retrieval(query, vector_store, embedding_model)` | Print the top-k chunks with scores |
+| `build_agent(vector_store, embedding_model, llm, top_k, system_prompt, ...)` | `RAG` agent, with optional query expansion and HyDE |
+| `ask(agent, query, history=None)` | Answer a query, print the answer and source files, return the `AgentAnswer` |
+| `run_pipeline(backend, model_name=None, query=..., reset_vs=False)` | All of the above in one call |
 
-The chat app (`ki_kompass_rag.main`) needs two ChromaDB collections. The notebooks do not: they build their own store (`db/data_vs.db/`) on first run.
+Command line, using the shared store at `VS_PATH`:
 
 ```bash
-uv run python -m ki_kompass_rag.build_app_db                # text and image stores
+BACKEND=openai uv run python -m ki_kompass_rag.baseline_rag
+BACKEND=openai QUERY="Which tape products have a verified EPD?" uv run python -m ki_kompass_rag.baseline_rag
+BACKEND=openai RESET_VS=1 uv run python -m ki_kompass_rag.baseline_rag   # rebuild the store
+```
+
+`BACKEND` is required here; there is no default.
+
+## Chat app
+
+```bash
+uv run python -m ki_kompass_rag.build_app_db                # or: make build-db
 uv run python -m ki_kompass_rag.build_app_db --skip-images  # text store only
+uv run python -m ki_kompass_rag.main                        # or: make run
+uv run uvicorn ki_kompass_rag.main:app --reload --port 8080 # with auto-reload
 ```
 
-| Step | What it does |
-|------|--------------|
-| Load all chunks | `load_chunks()` parses every file in `data/` and splits them into chunks |
-| Build text store | Embeds text chunks with OpenAI `text-embedding-3-small` and persists to `db/vs_text/` |
-| Build image store | Embeds image chunks with Qwen3-VL and persists to `db/vs_image/` |
+`build_app_db` rebuilds `DB_DIR/vs_text` (text chunks, OpenAI embeddings) and `DB_DIR/vs_image` (image chunks extracted from the PDFs, Qwen3-VL on CPU) from scratch.
 
-Both stores are written to `backend/db/` by default (override with the `DB_DIR` environment variable).
-
-------|--------------|
-| Load all chunks | `load_chunks()` parses every file in `data/` and splits them into chunks |
-| Build text store | Embeds text chunks with OpenAI `text-embedding-3-small` and persists to `db/vs_text/` |
-| Build image store | Embeds image chunks with Qwen3-VL and persists to `db/vs_image/` |
-
-Both stores are written to `backend/db/` by default (override with the `DB_DIR` environment variable).
-
----
-
-## Feature tracks
-
-### T01: Baseline RAG Pipeline (`T01_baseline_rag.ipynb`)
-
-Introduces the five-stage RAG loop and demonstrates it end-to-end against the PrimePack AG corpus.
-
-| Step | Function               | What it does                                                                |
-|------|------------------------|-----------------------------------------------------------------------------|
-| 1    | `load_chunks()`        | Load all documents from `data/` and split into chunks (skips files > 20 MB) |
-| 2    | `build_vector_store()` | Embed chunks and persist to ChromaDB                                        |
-| 3    | `inspect_retrieval()`  | Run a semantic search and print ranked results                              |
-| 4    | `build_agent()`        | Assemble the RAG agent from the retriever and an LLM backend                |
-| 5    | `ask()`                | Send a query and stream the grounded answer                                 |
-
-### T02: Document Ingestion (`T02_ingestion_chunking.ipynb`)
-
-Deep-dive into document parsing and chunking; separate from the baseline so the ingestion workflow can be explored independently.
-
-- PDF parser comparison: markitdown vs. docling
-- Chunking strategies: fixed-size, header-based, paragraph-aware
-- Token limit: embedding model truncates at 256 tokens
-- Retrieval impact of chunking strategy choices
-
-### T04: Evaluation (`T04_evaluation.ipynb`)
-
-Systematic measurement of RAG pipeline quality using RAGAS.
-
-- Part 1 (reference-free): Faithfulness and AnswerRelevancy
-- Part 2 (ground truth): ContextPrecision and ContextRecall
-- Shared queries defined in `evaluation.py`
-
-### T05: Dataset Creation (`T05_synthetic_dataset.ipynb`)
-
-Scaling the evaluation dataset beyond manual queries.
-
-- Manual "golden query" reference set
-- Synthetic Q&A generation from vector store chunks via LLM
-
-### T06: Structured Outputs (`T06_structured_outputs.ipynb`)
-
-Making claim quality machine-readable.
-
-- Three prompting approaches: baseline prose, entity-grounding, JSON mode
-- Pydantic validation layer for output reliability
-- Evidence levels: VERIFIED / CLAIMED / MISSING / MIXED
-
-### T07: Advanced Retrieval (`T07_advanced_retrieval.ipynb`)
-
-Four retrieval strategies compared side-by-side.
-
-- Baseline semantic search
-- BM25 (exact keyword matching)
-- Hybrid (semantic + BM25 via Reciprocal Rank Fusion)
-- Metadata filtering (scope search to known documents)
-
-### T08–T09: Conversation and Query Techniques
-
-- `T08`: Multi-turn conversation management with history
-- `T09`: Query expansion and HyDE for better semantic retrieval
-
-### T10–T14: Tools and Agents
-
-Multi-step agent patterns for complex queries.
-
-- `T10`: LLM tool use fundamentals
-- `T11`: LLM agents
-- `T12`: RAG as a tool
-- `T13`: RAG agent
-- `T14`: RAG subagent for parallel multi-document queries
-
----
-
-## Running the backend server
-
-`main.py` starts a FastAPI server that wires together the RAG agent and in-memory conversation databases:
-
-```bash
-# From the project root
-cd backend
-BACKEND=openai python -m ki_kompass_rag.main
-
-# Or with uvicorn for hot reload during development
-uvicorn ki_kompass_rag.main:app --reload --port 8080
-```
-
-The server starts at `http://localhost:8080`. The frontend (in `frontend/`) connects to it automatically.
-
----
-
-## Running the pipeline from the command line
-
-```bash
-# Default (OpenAI)
-python -m ki_kompass_rag.baseline_rag
-
-# Ollama backend
-BACKEND=ollama python -m ki_kompass_rag.baseline_rag
-
-# Custom query
-QUERY="Which tape products have a verified EPD?" \
-python -m ki_kompass_rag.baseline_rag
-
-# Force rebuild of the vector store
-RESET_VS=1 python -m ki_kompass_rag.baseline_rag
-
-# Override model
-MODEL=gpt-4o BACKEND=openai python -m ki_kompass_rag.baseline_rag
-```
-
-The vector store is written to `backend/db/data_vs.db/` by default. Set `DB_DIR=/path/to/db` to use a different location. On subsequent runs, re-embedding is skipped if the store already exists (`RESET_VS=1` forces a rebuild).
-
----
+`main` serves the toolkit API on `0.0.0.0:8080`. The agent is a `RAG` over a hybrid retriever (`vs_text` semantic plus BM25, fused with RRF) and an image retriever over `vs_image`. It answers in a JSON schema containing the answer, the IDs of the sources it used and follow-up questions; only the cited sources are returned. Qwen3-VL is loaded at startup even if `vs_image` is empty. `BACKEND` defaults to `openai`. Conversations are stored as JSON files in `DB_DIR` and logs go to `<repo>/logs/api.log`. The frontend reaches the backend through `SERVER_URL` in `frontend/.env`.
 
 ## LLM backends
 
-| Backend  | Environment variable | Default model      |
-|----------|----------------------|--------------------|
-| `openai` | `OPENAI_API_KEY`     | `gpt-4o-mini`      |
-| `ollama` | —                    | `mistral-nemo:12b` |
+| `BACKEND` | Default model | Requires |
+|---|---|---|
+| `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` |
+| `ollama` | `mistral-nemo:12b` | `ollama serve` on `localhost:11434` and the pulled model |
+| `qwen` | `Qwen/Qwen3-32B-AWQ` | `SDSC_QWEN3_32B_AWQ` (SDSC-internal vLLM endpoint) |
 
-Set `BACKEND=<name>` and optionally `MODEL=<model-name>` as environment variables before running any feature module.
+The `baseline_rag` command line accepts `MODEL` to override the default; the chat app always uses the default. Embeddings use OpenAI `text-embedding-3-small` with every backend, so `OPENAI_API_KEY` is always required.

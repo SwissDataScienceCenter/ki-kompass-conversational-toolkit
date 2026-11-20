@@ -1,70 +1,22 @@
-# Conversation Toolkit Frontend
+# Frontend
 
-A customizable frontend for conversational applications. This repository provides a base implementation that can be easily modified and extended.
+Next.js chat UI for the `conversational_toolkit` API. It talks to the backend at `SERVER_URL`, set in `.env` to `http://localhost:8080` (the default port of `ki_kompass_rag.main`).
 
-## Installation
-
-Ensure you have [Node.js](https://nodejs.org/) and npm installed. Then, install dependencies:
-
-```
+```bash
 npm install
-```
-
-## Development
-
-### Running the Development Server
-
-Start the development server:
-
-```
-npm run dev
-```
-
-This will launch the application at `http://localhost:3000`.
-
-To run the development server with mock services, use:
-
-```
-npm run dev:mock
-```
-
-### Linting
-
-To maintain code consistency, run:
-
-```
+npm run dev        # http://localhost:3000
+npm run dev:mock   # mock services, no backend needed
 npm run lint
+npm run build      # static export to dist/
 ```
 
-## Building the Project
+`npm run dev` first runs `open http://localhost:3000`, which exists only on macOS; elsewhere run `npx next dev` and open the URL yourself.
 
-To generate a production build:
+`npm run build` sets `BUILD_MODE=export` and writes a static site to `dist/`. The toolkit's `create_app(controller, dist_path=...)` can serve that folder.
 
-```
-npm run build
-```
+To adapt the UI:
 
-This will create a `dist` folder containing the compiled static files. The build process uses `BUILD_MODE=export` to optimize the output.
-
-Once built, you can copy these files into the root of your backend service, which will serve the frontend assets.
-
-## Customization
-
-You can modify the following files to tailor the frontend to your needs:
-
-- **Branding & Theming**
-    - `/public/`: Replace logo assets and favicon.
-    - `/src/styles/global.css`: Modify theme colors and styles.
-
-- **Configuration**
-    - `/src/config.ts`: Update the agent name, page title, description, and logo path.
-    - `/src/lib/lang/`: Customize default prompt suggestions and popup descriptions.
-
-## Configuration
-
-If the project requires specific environment variables, add them to a `.env` file:
-
-```
-# .env
-SERVER_URL=https://your-backend-url.com
-```
+- `public/`: logo and favicon
+- `src/styles/globals.css`: theme colours and styles
+- `src/config.ts`: app name, description, logo path and agent name
+- `src/lib/lang/`: UI text and prompt suggestions (en, de, fr, it)
