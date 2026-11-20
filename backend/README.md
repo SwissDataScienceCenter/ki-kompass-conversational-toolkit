@@ -7,6 +7,7 @@ The PrimePack AG application of `conversational_toolkit`: the pipeline modules t
 ```
 backend/
 ├── notebooks/english/        T01 to T14
+├── notebooks/german/         T01 to T14, German text
 ├── db/                       created at runtime, git-ignored
 │   ├── data_vs.db/           notebook and CLI store (text, OpenAI embeddings)
 │   ├── vs_text/              chat app text store (OpenAI embeddings)

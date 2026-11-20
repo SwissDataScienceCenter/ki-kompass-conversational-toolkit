@@ -30,7 +30,7 @@ echo "OPENAI_API_KEY=sk-..." > .env.local
 uv run jupyter lab
 ```
 
-Open `backend/notebooks/english/T01_baseline_rag.ipynb` and run the notebooks in order, each one top to bottom. The notebooks share one vector store, `backend/db/data_vs.db`, which is built from `data/` the first time it is needed.
+Open `backend/notebooks/english/T01_baseline_rag.ipynb` and run the notebooks in order, each one top to bottom. `backend/notebooks/german/` has the same notebooks with German text; code, prompts and documents stay in English. The notebooks share one vector store, `backend/db/data_vs.db`, which is built from `data/` the first time it is needed.
 
 On Renku, start a session from the workshop link and open T01.
 
@@ -142,6 +142,7 @@ Reference documents:
 ```
 backend/                  ki_kompass_rag package: pipeline modules, chat app, notebooks
   notebooks/english/      T01 to T14
+  notebooks/german/       T01 to T14, German text
   db/                     vector stores and app data, created at runtime (git-ignored)
 conversational-toolkit/   conversational_toolkit library
 frontend/                 Next.js chat UI

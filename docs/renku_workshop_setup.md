@@ -40,8 +40,8 @@ At session start, `init.d/setup_project.sh` finds `openai_api_key` in the mounte
 
 Open the project in a private browser window (not logged in) and launch a session. Check that:
 
-- the repository is in the session and `backend/notebooks/english/` is there,
-- `T01_baseline_rag.ipynb` runs top to bottom with `BACKEND = "openai"`.
+- the repository is in the session and `backend/notebooks/english/` and `backend/notebooks/german/` are there,
+- `T01_baseline_rag.ipynb` runs top to bottom.
 
 ## 5. Booking
 
