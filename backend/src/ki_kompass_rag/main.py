@@ -50,6 +50,7 @@ from ki_kompass_rag.utils.json import parse_llm_json_stream
 logger.add(ROOT / "logs" / "api.log", rotation="50 MB")
 
 BACKEND = os.getenv("BACKEND", "openai")
+MODEL = os.getenv("MODEL")
 DB_DIR.mkdir(parents=True, exist_ok=True)
 
 SYSTEM_PROMPT = dedent("""
@@ -141,6 +142,7 @@ def build_server():
 
     llm = build_llm(
         backend=BACKEND,
+        model_name=MODEL,
         response_format={
             "type": "json_schema",
             "json_schema": {
@@ -153,7 +155,7 @@ def build_server():
     agent = CustomRAG(
         llm=llm,
         # Query rewriting needs plain text, not the answer schema.
-        utility_llm=build_llm(backend=BACKEND),
+        utility_llm=build_llm(backend=BACKEND, model_name=MODEL),
         system_prompt=SYSTEM_PROMPT,
         retrievers=[hybrid_retriever, image_retriever],
     )

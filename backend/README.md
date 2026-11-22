@@ -69,7 +69,7 @@ uv run uvicorn ki_kompass_rag.main:app --reload --port 8080 # with auto-reload
 | `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` |
 | `ollama` | `mistral-nemo:12b` | `ollama serve` on `localhost:11434` and the pulled model |
 
-The `baseline_rag` command line accepts `MODEL` to override the default; the chat app always uses the default.
+`MODEL` overrides the default model in the chat app and the `baseline_rag` command line, e.g. `BACKEND=ollama MODEL=<name> make run` for any chat model from the [Ollama library](https://ollama.com/library).
 
 ## Embedding models
 

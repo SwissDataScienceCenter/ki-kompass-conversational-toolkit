@@ -67,7 +67,7 @@ cd frontend && npm install && npm run dev   # second terminal; open http://local
 
 The chat app and the `baseline_rag` command line select the LLM with `BACKEND` (`openai` or `ollama`). The notebooks use OpenAI. Embeddings use `EMBEDDING_MODEL`, by default OpenAI `text-embedding-3-small`; any [sentence-transformers](https://huggingface.co/models?library=sentence-transformers) model name, e.g. `sentence-transformers/all-MiniLM-L6-v2`, runs locally instead. See [backend/README.md](backend/README.md#llm-backends) for the defaults.
 
-To run the LLM locally, install [Ollama](https://ollama.com/download), run `ollama pull mistral-nemo:12b`, keep `ollama serve` running (the macOS app does this), and start the backend with `BACKEND=ollama make run`. Set `EMBEDDING_MODEL` to a local model as well to send nothing to OpenAI.
+To run the LLM locally, install [Ollama](https://ollama.com/download), pull a model, e.g. `ollama pull mistral-nemo:12b` (the default), keep `ollama serve` running (the macOS app does this), and start the backend with `BACKEND=ollama make run`. For another model from the [Ollama library](https://ollama.com/library), add `MODEL=<name>`. Set `EMBEDDING_MODEL` to a local model as well to send nothing to OpenAI.
 
 ## Dataset
 
