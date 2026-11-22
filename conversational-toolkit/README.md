@@ -2,9 +2,17 @@
 
 [Deutsche Version](README.de.md)
 
-Building blocks for retrieval-augmented conversational agents: chunkers, embedding models, vector stores, retrievers, LLM clients, agents, evaluation metrics, conversation storage and a FastAPI server for the chat frontend in `../frontend`.
+A Python library for building chat assistants that answer from your own documents (retrieval-augmented generation, RAG) or use tools. It covers the whole path: splitting documents into chunks, embedding and storing them, retrieving the relevant ones, generating an answer with an LLM, and serving the conversation through an API to the chat frontend in `../frontend`. Each step is an interchangeable component, so you can swap, for example, the LLM provider or the vector store without changing the rest.
 
-It is installed as an editable workspace member by `uv sync` at the repository root. The Postgres vector store and conversation database need the `postgres` extra: `uv sync --all-packages --extra postgres`.
+## How to use it
+
+1. **Index your documents:** split them with a `Chunker`, embed the chunks with an `EmbeddingsModel` and store them in a `VectorStore`.
+2. **Build an agent:** wrap the store in a `Retriever` and pass it, together with an `LLM` and a system prompt, to a `RAG` agent. Or give a `ToolAgent` tools to call.
+3. **Use the agent:** call `agent.answer(...)` from your own code or notebooks, or serve it as a chat app with `ConversationalToolkitController` and `create_app`.
+
+`examples/simple_rag.py` shows all three steps in one file. The `ki_kompass_rag` package in `../backend` is a complete application built on the toolkit; its notebooks introduce the components one by one.
+
+It is installed as an editable workspace member by `uv sync` at the repository root.
 
 ## Architecture
 

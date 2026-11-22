@@ -2,9 +2,17 @@
 
 [English version](README.md)
 
-Bausteine für konversationelle Agenten mit Retrieval: Chunker, Embedding-Modelle, Vector Stores, Retriever, LLM-Clients, Agenten, Evaluationsmetriken, Speicherung von Konversationen und ein FastAPI-Server für das Chat-Frontend in `../frontend`.
+Eine Python-Bibliothek für Chat-Assistenten, die Fragen aus eigenen Dokumenten beantworten (Retrieval-Augmented Generation, RAG) oder Tools verwenden. Sie deckt den ganzen Weg ab: Dokumente in Chunks aufteilen, diese embedden und speichern, die relevanten wiederfinden, mit einem LLM eine Antwort generieren und die Konversation über eine API für das Chat-Frontend in `../frontend` bereitstellen. Jeder Schritt ist eine austauschbare Komponente; so lässt sich zum Beispiel der LLM-Anbieter oder der Vector Store wechseln, ohne den Rest zu ändern.
 
-`uv sync` im Hauptverzeichnis des Repos installiert es als editierbares Workspace-Paket. Der Postgres-Vector-Store und die Postgres-Konversationsdatenbank brauchen das Extra `postgres`: `uv sync --all-packages --extra postgres`.
+## Verwendung
+
+1. **Dokumente indexieren:** mit einem `Chunker` aufteilen, die Chunks mit einem `EmbeddingsModel` embedden und in einem `VectorStore` speichern.
+2. **Agenten bauen:** den Store in einen `Retriever` packen und ihn zusammen mit einem `LLM` und einem System-Prompt einem `RAG`-Agenten übergeben. Oder einem `ToolAgent` Tools zum Aufrufen geben.
+3. **Agenten verwenden:** `agent.answer(...)` aus eigenem Code oder Notebooks aufrufen, oder ihn mit `ConversationalToolkitController` und `create_app` als Chat-App bereitstellen.
+
+`examples/simple_rag.py` zeigt alle drei Schritte in einer Datei. Das Paket `ki_kompass_rag` in `../backend` ist eine vollständige Anwendung auf Basis des Toolkits; seine Notebooks führen die Komponenten Schritt für Schritt ein.
+
+`uv sync` im Hauptverzeichnis des Repos installiert es als editierbares Workspace-Paket.
 
 ## Architektur
 
