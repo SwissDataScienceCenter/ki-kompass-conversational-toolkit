@@ -1,5 +1,7 @@
 # KI-Kompass RAG
 
+[Deutsche Version](README.de.md)
+
 A retrieval-augmented generation (RAG) toolkit and a series of notebooks built on it. The toolkit is general-purpose; the notebooks and the chat app apply it to one example company, PrimePack AG.
 
 ## Scenario
@@ -159,7 +161,7 @@ make test  # uv run pytest -q
 make lint  # ruff check, ruff format --check, mypy
 ```
 
-CI (`.github/workflows/tests.yml`) runs ruff and pytest on Python 3.12 and 3.13. Pre-commit strips notebook outputs. Use branch prefixes `feature/`, `fix/`, `docs/` or `data/`. When you add a document to `data/`, follow the prefix convention and add it to the tables above.
+CI (`.github/workflows/tests.yml`) runs ruff, mypy and pytest on Python 3.12 and 3.13. Pre-commit strips notebook outputs. Use branch prefixes `feature/`, `fix/`, `docs/` or `data/`. When you add a document to `data/`, follow the prefix convention and add it to the tables above.
 
 
 ## License
