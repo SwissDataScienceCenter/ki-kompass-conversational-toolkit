@@ -28,6 +28,8 @@ echo "OPENAI_API_KEY=sk-..." > .env.local
 
 ## Notebooks
 
+Im Workshop laufen die Notebooks auf Renku, ohne lokale Installation: siehe [Renku im KI-Kompass](docs/renku_teilnehmende.md).
+
 ```bash
 uv run jupyter lab
 ```

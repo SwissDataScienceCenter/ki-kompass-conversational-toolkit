@@ -146,7 +146,7 @@ backend/                  ki_kompass_rag package: pipeline modules, chat app, no
 conversational-toolkit/   conversational_toolkit library
 frontend/                 Next.js chat UI
 data/                     document corpus
-docs/                     organiser guide for Renku workshops
+docs/                     Renku guides for organisers and participants (German)
 init.d/                   Renku session start script
 tests/                    pytest suite for the toolkit and the backend
 ```
