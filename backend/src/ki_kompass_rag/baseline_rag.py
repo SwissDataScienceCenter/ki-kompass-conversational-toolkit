@@ -1,6 +1,6 @@
 """Baseline RAG: load_chunks -> build_vector_store -> inspect_retrieval -> build_agent -> ask.
 
-Run: BACKEND=openai|ollama|qwen [MODEL=..] [QUERY=..] [RESET_VS=1] python -m ki_kompass_rag.baseline_rag
+Run: BACKEND=openai|ollama [MODEL=..] [QUERY=..] [RESET_VS=1] python -m ki_kompass_rag.baseline_rag
 """
 
 import asyncio
@@ -34,9 +34,6 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 RETRIEVER_TOP_K = 5
 SEED = 42
 MAX_FILE_SIZE_MB = 20
-QWEN_BASE_URL = (
-    "https://vllm-gateway-runai-codev-llm.inference.compute.datascience.ch/v1"
-)
 
 SYSTEM_PROMPT = (
     "You are a helpful AI assistant specialised in sustainability and product compliance for PrimePack AG.\n\n"
@@ -68,7 +65,7 @@ def build_llm(
     temperature: float = 0.3,
     response_format=None,
 ) -> LLM:
-    """Backends: openai (gpt-4o-mini), ollama (mistral-nemo:12b), qwen (SDSC Qwen3-32B-AWQ)."""
+    """Backends: openai (gpt-4o-mini), ollama (mistral-nemo:12b)."""
     match backend.lower().strip():
         case "openai":
             name = model_name or "gpt-4o-mini"
@@ -77,16 +74,6 @@ def build_llm(
                 temperature=temperature,
                 seed=SEED,
                 response_format=response_format,
-            )
-        case "qwen":
-            name = model_name or "Qwen/Qwen3-32B-AWQ"
-            llm = OpenAILLM(
-                model_name=name,
-                temperature=temperature,
-                seed=SEED,
-                response_format=response_format,
-                base_url=QWEN_BASE_URL,
-                api_key=os.environ["SDSC_QWEN3_32B_AWQ"],
             )
         case "ollama":
             name = model_name or "mistral-nemo:12b"
@@ -98,7 +85,7 @@ def build_llm(
             )
         case _:
             raise ValueError(
-                f"Unsupported backend {backend!r}. Choose 'openai', 'ollama', or 'qwen'."
+                f"Unsupported backend {backend!r}. Choose 'openai' or 'ollama'."
             )
     logger.info(f"LLM backend: {backend} ({name})")
     return llm
@@ -279,7 +266,7 @@ async def run_pipeline(
 
 if __name__ == "__main__":
     if not (_backend := os.getenv("BACKEND")):
-        raise SystemExit("Set BACKEND to one of: openai, ollama, qwen")
+        raise SystemExit("Set BACKEND to one of: openai, ollama")
     asyncio.run(
         run_pipeline(
             backend=_backend,

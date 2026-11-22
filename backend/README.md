@@ -30,7 +30,7 @@ backend/
 | Name | Purpose |
 |---|---|
 | `ROOT`, `DATA_DIR`, `DB_DIR`, `VS_PATH` | Repository root, `data/`, `backend/db/` (override with `DB_DIR`), `DB_DIR/data_vs.db` |
-| `build_llm(backend, model_name=None, ...)` | LLM for `openai`, `ollama` or `qwen` |
+| `build_llm(backend, model_name=None, ...)` | LLM for `openai` or `ollama` |
 | `load_chunks(max_files=None, with_images=False)` | Chunk every supported file in `data/` except `EVALUATION_*`; skips files over 20 MB |
 | `build_vector_store(chunks, embedding_model, db_path, reset)` | Embed chunks into a ChromaDB store; does nothing if the store is non-empty and `reset` is false |
 | `load_or_build_vector_store(reset=False)` | Open `VS_PATH`, building it from all documents if it is empty |
@@ -68,6 +68,5 @@ uv run uvicorn ki_kompass_rag.main:app --reload --port 8080 # with auto-reload
 |---|---|---|
 | `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` |
 | `ollama` | `mistral-nemo:12b` | `ollama serve` on `localhost:11434` and the pulled model |
-| `qwen` | `Qwen/Qwen3-32B-AWQ` | `SDSC_QWEN3_32B_AWQ` (SDSC-internal vLLM endpoint) |
 
 The `baseline_rag` command line accepts `MODEL` to override the default; the chat app always uses the default. Embeddings use OpenAI `text-embedding-3-small` with every backend, so `OPENAI_API_KEY` is always required.
