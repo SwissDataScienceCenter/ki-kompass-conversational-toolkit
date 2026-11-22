@@ -9,8 +9,8 @@ backend/
 ├── notebooks/english/        T01 to T14
 ├── notebooks/german/         T01 to T14, German text
 ├── db/                       created at runtime, git-ignored
-│   ├── data_vs.db/           notebook and CLI store (text, OpenAI embeddings)
-│   ├── vs_text/              chat app text store (OpenAI embeddings)
+│   ├── data_vs.db/           notebook and CLI store (text, EMBEDDING_MODEL)
+│   ├── vs_text/              chat app text store (EMBEDDING_MODEL)
 │   ├── vs_image/             chat app image store (Qwen3-VL embeddings)
 │   └── *.json                chat app conversations, messages, reactions, sources, users
 └── src/ki_kompass_rag/
@@ -58,7 +58,7 @@ uv run python -m ki_kompass_rag.main                        # or: make run
 uv run uvicorn ki_kompass_rag.main:app --reload --port 8080 # with auto-reload
 ```
 
-`build_app_db` rebuilds `DB_DIR/vs_text` (text chunks, OpenAI embeddings) and `DB_DIR/vs_image` (image chunks extracted from the PDFs, Qwen3-VL on CPU) from scratch.
+`build_app_db` rebuilds `DB_DIR/vs_text` (text chunks, `EMBEDDING_MODEL`) and `DB_DIR/vs_image` (image chunks extracted from the PDFs, Qwen3-VL on CPU) from scratch.
 
 `main` serves the toolkit API on `0.0.0.0:8080`. The agent is a `RAG` over a hybrid retriever (`vs_text` semantic plus BM25, fused with RRF) and an image retriever over `vs_image`. It answers in a JSON schema containing the answer, the IDs of the sources it used and follow-up questions; only the cited sources are returned. Qwen3-VL is loaded at startup even if `vs_image` is empty. `BACKEND` defaults to `openai`. Conversations are stored as JSON files in `DB_DIR` and logs go to `<repo>/logs/api.log`. The frontend reaches the backend through `SERVER_URL` in `frontend/.env`.
 
@@ -69,4 +69,10 @@ uv run uvicorn ki_kompass_rag.main:app --reload --port 8080 # with auto-reload
 | `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` |
 | `ollama` | `mistral-nemo:12b` | `ollama serve` on `localhost:11434` and the pulled model |
 
-The `baseline_rag` command line accepts `MODEL` to override the default; the chat app always uses the default. Embeddings use OpenAI `text-embedding-3-small` with every backend, so `OPENAI_API_KEY` is always required.
+The `baseline_rag` command line accepts `MODEL` to override the default; the chat app always uses the default.
+
+## Embedding models
+
+`EMBEDDING_MODEL` selects the embedding model for the notebook store, the command line and the chat app. A name starting with `text-embedding-` uses the OpenAI API (default `text-embedding-3-small`); any other name loads a local [sentence-transformers](https://huggingface.co/models?library=sentence-transformers) model, downloaded on first use.
+
+Each store records the model it was built with. `load_or_build_vector_store()` rebuilds `data_vs.db` when the model changes. The chat app refuses to start until `make build-db` has rebuilt `vs_text` with the new model. Image embeddings always use Qwen3-VL.

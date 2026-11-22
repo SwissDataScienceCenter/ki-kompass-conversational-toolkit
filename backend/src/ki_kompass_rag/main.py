@@ -28,7 +28,6 @@ from conversational_toolkit.conversation_database.in_memory.source import (
 from conversational_toolkit.conversation_database.in_memory.user import (
     InMemoryUserDatabase,
 )
-from conversational_toolkit.embeddings.openai import OpenAIEmbeddings
 from conversational_toolkit.embeddings.qwen_vl import Qwen3VLEmbeddings
 from conversational_toolkit.llms.base import MessageContent
 from conversational_toolkit.retriever.bm25_retriever import BM25Retriever
@@ -41,7 +40,9 @@ from ki_kompass_rag.baseline_rag import (
     EMBEDDING_MODEL,
     RETRIEVER_TOP_K,
     ROOT,
+    build_embeddings,
     build_llm,
+    store_embedding_model,
 )
 from ki_kompass_rag.build_app_db import IMAGE_VS_PATH, TEXT_VS_PATH
 from ki_kompass_rag.utils.json import parse_llm_json_stream
@@ -117,10 +118,13 @@ ANSWER_SCHEMA = {
 
 
 def build_server():
-    text_embedding_model = OpenAIEmbeddings(model_name=EMBEDDING_MODEL)
-    image_embedding_model = Qwen3VLEmbeddings()
-
     text_vs = ChromaDBVectorStore(db_path=str(TEXT_VS_PATH))
+    if (built_with := store_embedding_model(text_vs)) != EMBEDDING_MODEL:
+        raise SystemExit(
+            f"{TEXT_VS_PATH} was built with {built_with}, not {EMBEDDING_MODEL}; run make build-db."
+        )
+    text_embedding_model = build_embeddings()
+    image_embedding_model = Qwen3VLEmbeddings()
     image_vs = ChromaDBVectorStore(db_path=str(IMAGE_VS_PATH))
 
     hybrid_retriever = HybridRetriever(

@@ -1,6 +1,6 @@
 """Baseline RAG: load_chunks -> build_vector_store -> inspect_retrieval -> build_agent -> ask.
 
-Run: BACKEND=openai|ollama [MODEL=..] [QUERY=..] [RESET_VS=1] python -m ki_kompass_rag.baseline_rag
+Run: BACKEND=openai|ollama [MODEL=..] [EMBEDDING_MODEL=..] [QUERY=..] [RESET_VS=1] python -m ki_kompass_rag.baseline_rag
 """
 
 import asyncio
@@ -30,7 +30,9 @@ DATA_DIR = ROOT / "data"
 DB_DIR = Path(os.getenv("DB_DIR", ROOT / "backend" / "db"))
 VS_PATH = DB_DIR / "data_vs.db"
 
-EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+# An OpenAI "text-embedding-*" model, or any sentence-transformers model name (runs locally).
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
 RETRIEVER_TOP_K = 5
 SEED = 42
 MAX_FILE_SIZE_MB = 20
@@ -141,6 +143,23 @@ def inspect_chunks(chunks: list[Chunk], sample_size: int = 5) -> None:
         logger.info(f"{chunk.content[:200].strip()!r}")
 
 
+def build_embeddings(model_name: str = EMBEDDING_MODEL) -> EmbeddingsModel:
+    if model_name.startswith("text-embedding-"):
+        return OpenAIEmbeddings(model_name)
+    # Deferred: loads torch.
+    from conversational_toolkit.embeddings.sentence_transformer import (
+        SentenceTransformerEmbeddings,
+    )
+
+    return SentenceTransformerEmbeddings(model_name)
+
+
+def store_embedding_model(vector_store: ChromaDBVectorStore) -> str:
+    """Model the store was built with; stores from before this was recorded used the default."""
+    metadata = vector_store.collection.metadata or {}
+    return str(metadata.get("embedding_model", DEFAULT_EMBEDDING_MODEL))
+
+
 async def build_vector_store(
     chunks: list[Chunk],
     embedding_model: EmbeddingsModel,
@@ -159,6 +178,8 @@ async def build_vector_store(
         )
         return vector_store
 
+    if model_name := getattr(embedding_model, "model_name", None):
+        vector_store.collection.modify(metadata={"embedding_model": model_name})
     n_batches = -(-len(chunks) // batch_size)
     for i in range(0, len(chunks), batch_size):
         batch = chunks[i : i + batch_size]
@@ -178,12 +199,17 @@ async def build_vector_store(
 
 async def load_or_build_vector_store(
     reset: bool = False,
-) -> tuple[ChromaDBVectorStore, OpenAIEmbeddings]:
-    """Open the notebooks' store at VS_PATH, building it from all documents if empty or reset."""
-    embedding_model = OpenAIEmbeddings(model_name=EMBEDDING_MODEL)
+) -> tuple[ChromaDBVectorStore, EmbeddingsModel]:
+    """Open the notebooks' store at VS_PATH; rebuild it if empty, reset, or built with another embedding model."""
+    embedding_model = build_embeddings()
     vector_store = ChromaDBVectorStore(db_path=str(VS_PATH))
     # Stores from older versions use L2 and 1024-dim embeddings; rebuild them.
-    if reset or vector_store.collection.count() == 0 or vector_store.space != "cosine":
+    if (
+        reset
+        or vector_store.collection.count() == 0
+        or vector_store.space != "cosine"
+        or store_embedding_model(vector_store) != EMBEDDING_MODEL
+    ):
         vector_store = await build_vector_store(
             load_chunks(), embedding_model, db_path=VS_PATH, reset=True
         )

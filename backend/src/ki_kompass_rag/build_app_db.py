@@ -1,4 +1,4 @@
-"""Build the chat app's vector stores: DB_DIR/vs_text (OpenAI) and DB_DIR/vs_image (Qwen3-VL, slow on CPU).
+"""Build the chat app's vector stores: DB_DIR/vs_text (EMBEDDING_MODEL) and DB_DIR/vs_image (Qwen3-VL, slow on CPU).
 
 Usage: python -m ki_kompass_rag.build_app_db [--skip-images]
 """
@@ -8,10 +8,9 @@ import asyncio
 
 from loguru import logger
 
-from conversational_toolkit.embeddings.openai import OpenAIEmbeddings
 from ki_kompass_rag.baseline_rag import (
     DB_DIR,
-    EMBEDDING_MODEL,
+    build_embeddings,
     build_vector_store,
     load_chunks,
 )
@@ -25,7 +24,7 @@ async def build(skip_images: bool = False) -> None:
     chunks = load_chunks(with_images=not skip_images)
     await build_vector_store(
         [c for c in chunks if c.mime_type.startswith("text/")],
-        OpenAIEmbeddings(model_name=EMBEDDING_MODEL),
+        build_embeddings(),
         db_path=TEXT_VS_PATH,
         reset=True,
     )

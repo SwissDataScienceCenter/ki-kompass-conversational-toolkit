@@ -1,5 +1,7 @@
 import asyncio
 
+import numpy as np
+
 import pytest
 
 from conversational_toolkit.chunking.base import Chunk
@@ -101,3 +103,35 @@ def test_analyze_chunks():
         stats.median_chars,
     ) == (3, 1, 10, 3)
     assert ingestion.analyze_chunks([], "empty").total_chunks == 0
+
+
+def test_build_embeddings_picks_openai_by_name(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    assert isinstance(
+        baseline_rag.build_embeddings("text-embedding-3-small"),
+        baseline_rag.OpenAIEmbeddings,
+    )
+
+
+def test_vector_store_records_its_embedding_model(tmp_path):
+    class FakeEmbeddings:
+        model_name = "fake-model"
+
+        async def get_embeddings(self, texts):
+            return np.ones((len(texts), 2))
+
+    old = baseline_rag.ChromaDBVectorStore(str(tmp_path / "old"))
+    assert baseline_rag.store_embedding_model(old) == "text-embedding-3-small"
+
+    store = asyncio.run(
+        baseline_rag.build_vector_store(
+            [chunk("x")],
+            FakeEmbeddings(),  # type: ignore[arg-type]
+            db_path=tmp_path / "new",
+            reset=True,
+        )
+    )
+    reopened = baseline_rag.ChromaDBVectorStore(str(tmp_path / "new"))
+    assert baseline_rag.store_embedding_model(reopened) == "fake-model"
+    assert reopened.space == "cosine"
+    assert store.collection.count() == 1
