@@ -6,11 +6,17 @@ Eine Python-Bibliothek für Chat-Assistenten, die Fragen aus eigenen Dokumenten 
 
 ## Verwendung
 
+Das Toolkit enthält nichts, was an einen bestimmten Anwendungsfall gebunden ist. Dokumente, Prompts, Tools und Testfragen gehören zur Anwendung, die darauf aufbaut. `ki_kompass_rag` in `../backend` ist eine solche Anwendung, für die Beispielfirma PrimePack AG; ihre Notebooks führen die Komponenten Schritt für Schritt ein.
+
+Für eine eigene RAG-Anwendung muss das Toolkit nicht verändert werden. Ein eigenes Paket anlegen, oder von einer Kopie von `../backend` ausgehen, und dort die vorhandenen Komponenten kombinieren:
+
 1. **Dokumente indexieren:** mit einem `Chunker` aufteilen, die Chunks mit einem `EmbeddingsModel` embedden und in einem `VectorStore` speichern.
 2. **Agenten bauen:** den Store in einen `Retriever` packen und ihn zusammen mit einem `LLM` und einem System-Prompt einem `RAG`-Agenten übergeben. Oder einem `ToolAgent` Tools zum Aufrufen geben.
 3. **Agenten verwenden:** `agent.answer(...)` aus eigenem Code oder Notebooks aufrufen, oder ihn mit `ConversationalToolkitController` und `create_app` als Chat-App bereitstellen.
 
-`examples/simple_rag.py` zeigt alle drei Schritte in einer Datei. Das Paket `ki_kompass_rag` in `../backend` ist eine vollständige Anwendung auf Basis des Toolkits; seine Notebooks führen die Komponenten Schritt für Schritt ein.
+`examples/simple_rag.py` zeigt alle drei Schritte in einer Datei.
+
+Fehlt etwas, zum Beispiel ein weiterer Dateityp, eine andere Vektordatenbank oder ein anderer LLM-Anbieter, lässt sich das Toolkit erweitern: von der passenden Basisklasse ableiten (siehe [Erweitern](#erweitern)). Die neue Klasse kann in der eigenen Anwendung liegen oder im Toolkit, damit auch andere Anwendungen sie nutzen können.
 
 `uv sync` im Hauptverzeichnis des Repos installiert es als editierbares Workspace-Paket.
 
