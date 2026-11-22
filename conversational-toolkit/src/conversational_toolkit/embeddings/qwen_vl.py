@@ -269,7 +269,7 @@ class Qwen3VLEmbeddings(EmbeddingsModel):
 
     async def _encode(self, items: list[dict]) -> np.ndarray:
         emb = await asyncio.to_thread(self.embedder.encode, items)
-        return emb.cpu().numpy()
+        return emb.float().cpu().numpy()
 
     async def get_text_embeddings(self, texts: str | list[str]) -> np.ndarray:
         return await self._encode([{"text": t} for t in ([texts] if isinstance(texts, str) else texts)])
