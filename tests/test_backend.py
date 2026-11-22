@@ -82,6 +82,11 @@ def test_build_llm_rejects_unknown_backend():
         baseline_rag.build_llm("bogus")
 
 
+def test_build_llm_ollama_needs_a_model_name():
+    with pytest.raises(ValueError, match="model name"):
+        baseline_rag.build_llm("ollama")
+
+
 def test_fixed_size_chunks_overlap(monkeypatch):
     monkeypatch.setattr(ingestion, "_markdown", lambda _: "abcdefghij")
     chunks = ingestion.fixed_size_chunks("x.pdf", chunk_size=4, overlap=1)

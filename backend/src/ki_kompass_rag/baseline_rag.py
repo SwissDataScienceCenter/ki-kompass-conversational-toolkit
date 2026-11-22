@@ -67,7 +67,7 @@ def build_llm(
     temperature: float = 0.3,
     response_format=None,
 ) -> LLM:
-    """Backends: openai (gpt-4o-mini), ollama (mistral-nemo:12b)."""
+    """Backends: openai (default gpt-4o-mini) or ollama (model_name required)."""
     match backend.lower().strip():
         case "openai":
             name = model_name or "gpt-4o-mini"
@@ -78,7 +78,11 @@ def build_llm(
                 response_format=response_format,
             )
         case "ollama":
-            name = model_name or "mistral-nemo:12b"
+            if not model_name:
+                raise ValueError(
+                    "The ollama backend needs a model name, e.g. MODEL=<name>."
+                )
+            name = model_name
             llm = OllamaLLM(
                 model_name=name,
                 temperature=temperature,

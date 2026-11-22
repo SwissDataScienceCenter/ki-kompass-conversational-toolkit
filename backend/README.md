@@ -16,7 +16,7 @@ This package is where the toolkit is applied to one use case. To use it for your
 | Answer format of the chat app | `ANSWER_SCHEMA` in `main.py` |
 | Test questions | `EVALUATION_QUERIES` in `evaluation.py` (T04, T05) |
 | Tools | `tool_agents.py` (T10 to T14) |
-| Models | `BACKEND`, `MODEL` and `EMBEDDING_MODEL`, see below |
+| Models | `BACKEND`, `MODEL` and `EMBEDDING_MODEL`, see [Models](#models) |
 | Chat app name and texts | `frontend/src/config.ts` and `frontend/src/lib/lang/` |
 
 After changing the documents or the chunking, rebuild the stores: `load_or_build_vector_store(reset=True)` for the notebooks and `make build-db` for the chat app.
@@ -44,54 +44,21 @@ backend/
     └── utils/json.py         parse_llm_json_stream for partial JSON from a stream
 ```
 
-## baseline_rag
-
-| Name | Purpose |
-|---|---|
-| `ROOT`, `DATA_DIR`, `DB_DIR`, `VS_PATH` | Repository root, `data/`, `backend/db/` (override with `DB_DIR`), `DB_DIR/data_vs.db` |
-| `build_llm(backend, model_name=None, ...)` | LLM for `openai` or `ollama` |
-| `load_chunks(max_files=None, with_images=False)` | Chunk every supported file in `data/` except `EVALUATION_*`; skips files over 20 MB |
-| `build_vector_store(chunks, embedding_model, db_path, reset)` | Embed chunks into a ChromaDB store; does nothing if the store is non-empty and `reset` is false |
-| `load_or_build_vector_store(reset=False)` | Open `VS_PATH`, building it from all documents if it is empty |
-| `inspect_retrieval(query, vector_store, embedding_model)` | Print the top-k chunks with scores |
-| `build_agent(vector_store, embedding_model, llm, top_k, system_prompt, ...)` | `RAG` agent, with optional query expansion and HyDE |
-| `ask(agent, query, history=None)` | Answer a query, print the answer and source files, return the `AgentAnswer` |
-| `run_pipeline(backend, model_name=None, query=..., reset_vs=False)` | All of the above in one call |
-
-Command line, using the shared store at `VS_PATH`:
+## Command line
 
 ```bash
 BACKEND=openai uv run python -m ki_kompass_rag.baseline_rag
 BACKEND=openai QUERY="Which tape products have a verified EPD?" uv run python -m ki_kompass_rag.baseline_rag
-BACKEND=openai RESET_VS=1 uv run python -m ki_kompass_rag.baseline_rag   # rebuild the store
 ```
 
-`BACKEND` is required here; there is no default.
+`RESET_VS=1` rebuilds the notebook store.
 
 ## Chat app
 
-```bash
-uv run python -m ki_kompass_rag.build_app_db                # or: make build-db
-uv run python -m ki_kompass_rag.build_app_db --skip-images  # text store only
-uv run python -m ki_kompass_rag.main                        # or: make run
-uv run uvicorn ki_kompass_rag.main:app --reload --port 8080 # with auto-reload
-```
+`make build-db` builds `vs_text` and `vs_image`; `uv run python -m ki_kompass_rag.build_app_db --skip-images` builds the text store only. `make run` serves the API on port 8080. The agent combines hybrid retrieval over `vs_text` (semantic search plus BM25) with image retrieval over `vs_image` and answers in `ANSWER_SCHEMA`. Conversations are stored as JSON files in `DB_DIR`, logs in `<repo>/logs/api.log`.
 
-`build_app_db` rebuilds `DB_DIR/vs_text` (text chunks, `EMBEDDING_MODEL`) and `DB_DIR/vs_image` (image chunks extracted from the PDFs, Qwen3-VL on CPU) from scratch.
+## Models
 
-`main` serves the toolkit API on `0.0.0.0:8080`. The agent is a `RAG` over a hybrid retriever (`vs_text` semantic plus BM25, fused with RRF) and an image retriever over `vs_image`. It answers in a JSON schema containing the answer, the IDs of the sources it used and follow-up questions; only the cited sources are returned. Qwen3-VL is loaded at startup even if `vs_image` is empty. `BACKEND` defaults to `openai`. Conversations are stored as JSON files in `DB_DIR` and logs go to `<repo>/logs/api.log`. The frontend reaches the backend through `SERVER_URL` in `frontend/.env`.
-
-## LLM backends
-
-| `BACKEND` | Default model | Requires |
-|---|---|---|
-| `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` |
-| `ollama` | `mistral-nemo:12b` | `ollama serve` on `localhost:11434` and the pulled model |
-
-`MODEL` overrides the default model in the chat app and the `baseline_rag` command line, e.g. `BACKEND=ollama MODEL=<name> make run` for any chat model from the [Ollama library](https://ollama.com/library).
-
-## Embedding models
-
-`EMBEDDING_MODEL` selects the embedding model for the notebook store, the command line and the chat app. A name starting with `text-embedding-` uses the OpenAI API (default `text-embedding-3-small`); any other name loads a local [sentence-transformers](https://huggingface.co/models?library=sentence-transformers) model, downloaded on first use.
-
-Each store records the model it was built with. `load_or_build_vector_store()` rebuilds `data_vs.db` when the model changes. The chat app refuses to start until `make build-db` has rebuilt `vs_text` with the new model. Image embeddings always use Qwen3-VL.
+- `BACKEND`: `openai` (default model `gpt-4o-mini`) or `ollama`. Required for the command line; the chat app defaults to `openai`.
+- `MODEL`: overrides the LLM. Required with `ollama`: any chat model from the [Ollama library](https://ollama.com/library), pulled and served on `localhost:11434`.
+- `EMBEDDING_MODEL`: default `text-embedding-3-small`. Names starting with `text-embedding-` use OpenAI; any other name loads a local [sentence-transformers](https://huggingface.co/models?library=sentence-transformers) model. Each store records its model: the notebook store is rebuilt when the model changes, and the chat app asks for `make build-db`. Image embeddings always use Qwen3-VL.
