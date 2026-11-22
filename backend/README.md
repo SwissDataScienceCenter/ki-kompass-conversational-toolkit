@@ -1,5 +1,7 @@
 # ki_kompass_rag
 
+[Deutsche Version](README.de.md)
+
 The PrimePack AG application of `conversational_toolkit`: the pipeline modules the notebooks import, the script that builds the chat app's vector stores, and the FastAPI chat backend. Setup and the notebook overview are in the [root README](../README.md).
 
 ## Layout

@@ -1,5 +1,7 @@
 # conversational_toolkit
 
+[Deutsche Version](README.de.md)
+
 Building blocks for retrieval-augmented conversational agents: chunkers, embedding models, vector stores, retrievers, LLM clients, agents, evaluation metrics, conversation storage and a FastAPI server for the chat frontend in `../frontend`.
 
 It is installed as an editable workspace member by `uv sync` at the repository root. The Postgres vector store and conversation database need the `postgres` extra: `uv sync --all-packages --extra postgres`.
