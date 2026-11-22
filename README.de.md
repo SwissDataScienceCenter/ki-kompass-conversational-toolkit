@@ -32,7 +32,7 @@ echo "OPENAI_API_KEY=sk-..." > .env.local
 uv run jupyter lab
 ```
 
-`backend/notebooks/german/T01_baseline_rag.ipynb` öffnen und die Notebooks der Reihe nach ausführen, jedes von oben nach unten. Alle Notebooks verwenden denselben Vector Store, `backend/db/data_vs.db`, der beim ersten Bedarf aus `data/` gebaut wird.
+`backend/notebooks/german/T01_baseline_rag.ipynb` öffnen und die Notebooks der Reihe nach ausführen, jedes von oben nach unten. Alle Notebooks verwenden denselben Vector Store, `backend/db/data_vs.db`. Er wird beim ersten Ausführen automatisch aus den Dokumenten in `data/` erstellt.
 
 Die Erklärungen sind auf Deutsch. Code, Prompts und die Dokumente in `data/` bleiben auf Englisch: Die Dokumente sind englisch, und Fragen in derselben Sprache liefern meist bessere Treffer; die Prompts sind auf die Dokumente und das Testset abgestimmt. Zu jedem Prompt steht im Text eine deutsche Übersetzung. Die englischen Notebooks liegen in `backend/notebooks/english/`.
 
