@@ -1,5 +1,5 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, String, select
-from sqlalchemy.orm import relationship
+from sqlalchemy import BigInteger, ForeignKey, select
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from conversational_toolkit.conversation_database.data_models.conversation import Conversation, ConversationDatabase
 from conversational_toolkit.conversation_database.postgres.index import Base, PostgreSQLDatabase
@@ -7,21 +7,21 @@ from conversational_toolkit.conversation_database.postgres.index import Base, Po
 
 class ConversationTable(Base):
     __tablename__ = "conversations"
-    id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"))
-    create_timestamp = Column(BigInteger)
-    update_timestamp = Column(BigInteger)
-    title = Column(String)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    create_timestamp: Mapped[int] = mapped_column(BigInteger)
+    update_timestamp: Mapped[int] = mapped_column(BigInteger)
+    title: Mapped[str]
     user = relationship("UserTable", back_populates="conversations")
     messages = relationship("MessageTable", order_by="MessageTable.id", back_populates="conversation")
 
     def to_model(self) -> Conversation:
         return Conversation(
-            id=str(self.id),
-            user_id=str(self.user_id),
-            create_timestamp=int(self.create_timestamp),  # type: ignore[arg-type]
-            update_timestamp=int(self.update_timestamp),  # type: ignore[arg-type]
-            title=str(self.title),
+            id=self.id,
+            user_id=self.user_id,
+            create_timestamp=self.create_timestamp,
+            update_timestamp=self.update_timestamp,
+            title=self.title,
         )
 
 

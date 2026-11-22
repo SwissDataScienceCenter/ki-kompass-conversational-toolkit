@@ -1,6 +1,8 @@
-from sqlalchemy import Column, ForeignKey, String, Text, select
+from typing import Any
+
+from sqlalchemy import ForeignKey, Text, select
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from conversational_toolkit.conversation_database.data_models.source import Source, SourceDatabase
 from conversational_toolkit.conversation_database.postgres.index import Base, PostgreSQLDatabase
@@ -8,19 +10,14 @@ from conversational_toolkit.conversation_database.postgres.index import Base, Po
 
 class SourceTable(Base):
     __tablename__ = "sources"
-    id = Column(String, primary_key=True)
-    message_id = Column(String, ForeignKey("messages.id"))
-    content = Column(Text)
-    metadata_ = Column("metadata", JSONB)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
+    content: Mapped[str] = mapped_column(Text)
+    metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB)
     message = relationship("MessageTable", back_populates="sources")
 
     def to_model(self) -> Source:
-        return Source(
-            id=str(self.id),
-            message_id=str(self.message_id),
-            content=str(self.content),
-            metadata=self.metadata_,  # type: ignore[arg-type]
-        )
+        return Source(id=self.id, message_id=self.message_id, content=self.content, metadata=self.metadata_)
 
 
 class PostgreSQLSourceDatabase(PostgreSQLDatabase, SourceDatabase):

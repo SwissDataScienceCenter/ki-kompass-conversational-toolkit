@@ -1,6 +1,8 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, String, Text, select
+from typing import Any
+
+from sqlalchemy import BigInteger, ForeignKey, Text, select
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from conversational_toolkit.conversation_database.data_models.message import Message, MessageDatabase
 from conversational_toolkit.conversation_database.postgres.index import Base, PostgreSQLDatabase
@@ -9,14 +11,14 @@ from conversational_toolkit.llms.base import Roles
 
 class MessageTable(Base):
     __tablename__ = "messages"
-    id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"))
-    conversation_id = Column(String, ForeignKey("conversations.id"))
-    content = Column(Text)
-    role = Column(String)
-    create_timestamp = Column(BigInteger)
-    parent_id = Column(String, ForeignKey("messages.id"))
-    metadata_ = Column("metadata", JSONB)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"))
+    content: Mapped[str] = mapped_column(Text)
+    role: Mapped[str]
+    create_timestamp: Mapped[int] = mapped_column(BigInteger)
+    parent_id: Mapped[str | None] = mapped_column(ForeignKey("messages.id"))
+    metadata_: Mapped[list[dict[str, Any]] | None] = mapped_column("metadata", JSONB)
     conversation = relationship("ConversationTable", back_populates="messages")
     user = relationship("UserTable", back_populates="messages")
     sources = relationship("SourceTable", order_by="SourceTable.id", back_populates="message")
@@ -24,14 +26,14 @@ class MessageTable(Base):
 
     def to_model(self) -> Message:
         return Message(
-            id=str(self.id),
-            user_id=self.user_id,  # type: ignore[arg-type]
-            conversation_id=str(self.conversation_id),
-            content=str(self.content),
-            role=Roles(str(self.role)),
-            create_timestamp=int(self.create_timestamp),  # type: ignore[arg-type]
-            parent_id=self.parent_id,  # type: ignore[arg-type]
-            metadata=self.metadata_,  # type: ignore[arg-type]
+            id=self.id,
+            user_id=self.user_id,
+            conversation_id=self.conversation_id,
+            content=self.content,
+            role=Roles(self.role),
+            create_timestamp=self.create_timestamp,
+            parent_id=self.parent_id,
+            metadata=self.metadata_,
         )
 
 

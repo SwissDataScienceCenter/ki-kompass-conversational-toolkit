@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, String, Text, select
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey, Text, select
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from conversational_toolkit.conversation_database.data_models.reaction import Reaction, ReactionDatabase
 from conversational_toolkit.conversation_database.postgres.index import Base, PostgreSQLDatabase
@@ -7,20 +7,16 @@ from conversational_toolkit.conversation_database.postgres.index import Base, Po
 
 class ReactionTable(Base):
     __tablename__ = "reactions"
-    id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"))
-    message_id = Column(String, ForeignKey("messages.id"))
-    content = Column(Text)
-    note = Column(Text, nullable=True)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
+    content: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
     message = relationship("MessageTable", back_populates="reactions")
 
     def to_model(self) -> Reaction:
         return Reaction(
-            id=str(self.id),
-            user_id=str(self.user_id),
-            message_id=str(self.message_id),
-            content=str(self.content),
-            note=self.note,  # type: ignore[arg-type]
+            id=self.id, user_id=self.user_id, message_id=self.message_id, content=self.content, note=self.note
         )
 
 

@@ -1,5 +1,4 @@
-from sqlalchemy import Column, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from conversational_toolkit.conversation_database.data_models.user import User, UserDatabase
 from conversational_toolkit.conversation_database.postgres.index import Base, PostgreSQLDatabase
@@ -7,7 +6,7 @@ from conversational_toolkit.conversation_database.postgres.index import Base, Po
 
 class UserTable(Base):
     __tablename__ = "users"
-    id = Column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(primary_key=True)
     conversations = relationship("ConversationTable", order_by="ConversationTable.id", back_populates="user")
     messages = relationship("MessageTable", order_by="MessageTable.id", back_populates="user")
 
