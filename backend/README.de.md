@@ -4,6 +4,23 @@
 
 Die Anwendung von `conversational_toolkit` auf die PrimePack AG: die Pipeline-Module, die die Notebooks importieren, das Skript, das die Vector Stores der Chat-App baut, und das FastAPI-Backend der Chat-App. Setup und Übersicht der Notebooks stehen im [README im Hauptverzeichnis](../README.de.md).
 
+## Eigene Dokumente verwenden
+
+In diesem Paket wird das Toolkit auf einen Anwendungsfall angewendet. Wer es für eigene Dokumente und Fragen nutzen will, passt es hier an; `conversational_toolkit` bleibt unverändert.
+
+| Was | Wo |
+|---|---|
+| Dokumente | Die Dateien in `data/` ersetzen; unterstützt werden PDF-, Excel-, Markdown- und Textdateien |
+| Dateitypen und Chunking | `_CHUNKERS` in `baseline_rag.py`; Strategien zum Vergleichen in `ingestion.py` (T02) |
+| System-Prompts | `SYSTEM_PROMPT` in `baseline_rag.py` (Notebooks, Kommandozeile) und in `main.py` (Chat-App) |
+| Antwortformat der Chat-App | `ANSWER_SCHEMA` in `main.py` |
+| Testfragen | `EVALUATION_QUERIES` in `evaluation.py` (T04, T05) |
+| Tools | `tool_agents.py` (T10 bis T14) |
+| Modelle | `BACKEND`, `MODEL` und `EMBEDDING_MODEL`, siehe unten |
+| Name und Texte der Chat-App | `frontend/src/config.ts` und `frontend/src/lib/lang/` |
+
+Nach Änderungen an den Dokumenten oder am Chunking die Stores neu bauen: `load_or_build_vector_store(reset=True)` für die Notebooks und `make build-db` für die Chat-App.
+
 ## Aufbau
 
 ```

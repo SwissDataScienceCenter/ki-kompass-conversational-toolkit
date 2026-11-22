@@ -2,7 +2,7 @@
 
 [English version](README.md)
 
-Ein Toolkit für Retrieval-Augmented Generation (RAG) und eine Reihe von Notebooks, die darauf aufbauen. Das Toolkit ist an keinen bestimmten Anwendungsfall gebunden; die Notebooks und die Chat-App zeigen es am Beispiel der fiktiven Firma PrimePack AG.
+Ein Toolkit für Retrieval-Augmented Generation (RAG) und eine Reihe von Notebooks, die darauf aufbauen. Das Toolkit ist an keinen bestimmten Anwendungsfall gebunden; die Notebooks und die Chat-App zeigen es am Beispiel der fiktiven Firma PrimePack AG. Wie man es für eigene Dokumente verwendet, steht unter [Eigene Dokumente verwenden](backend/README.de.md#eigene-dokumente-verwenden).
 
 ## Szenario
 

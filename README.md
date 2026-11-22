@@ -2,7 +2,7 @@
 
 [Deutsche Version](README.de.md)
 
-A retrieval-augmented generation (RAG) toolkit and a series of notebooks built on it. The toolkit is general-purpose; the notebooks and the chat app apply it to one example company, PrimePack AG.
+A retrieval-augmented generation (RAG) toolkit and a series of notebooks built on it. The toolkit is general-purpose; the notebooks and the chat app apply it to one example company, PrimePack AG. To use it for your own documents, see [Adapting to your own documents](backend/README.md#adapting-to-your-own-documents).
 
 ## Scenario
 
