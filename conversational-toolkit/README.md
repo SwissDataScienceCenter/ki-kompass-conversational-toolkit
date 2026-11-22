@@ -6,17 +6,9 @@ A Python library for building chat assistants that answer from your own document
 
 ## How to use it
 
-The toolkit contains nothing specific to one use case. Documents, prompts, tools and test questions belong to the application built on top of it. `ki_kompass_rag` in `../backend` is such an application, for the example company PrimePack AG; its notebooks introduce the components one by one.
+The toolkit is independent of any use case; documents, prompts and tools belong to the application built on it. `ki_kompass_rag` in `../backend` is one such application.
 
-To build your own RAG application, you do not need to change the toolkit. Create your own package, or start from a copy of `../backend`, and combine the existing components there:
-
-1. **Index your documents:** split them with a `Chunker`, embed the chunks with an `EmbeddingsModel` and store them in a `VectorStore`.
-2. **Build an agent:** wrap the store in a `Retriever` and pass it, together with an `LLM` and a system prompt, to a `RAG` agent. Or give a `ToolAgent` tools to call.
-3. **Use the agent:** call `agent.answer(...)` from your own code or notebooks, or serve it as a chat app with `ConversationalToolkitController` and `create_app`.
-
-`examples/simple_rag.py` shows all three steps in one file.
-
-If you need something the toolkit does not have yet, such as another file type, vector database or LLM provider, extend it: subclass the matching base class (see [Extending](#extending)). The new class can live in your application, or in the toolkit so that other applications can use it too.
+To build your own RAG application, you don't change the toolkit: combine its components in your own package. `examples/simple_rag.py` shows a complete app in one file. If a component is missing, such as another file type or LLM provider, subclass its base class (see [Extending](#extending)).
 
 It is installed as an editable workspace member by `uv sync` at the repository root.
 
