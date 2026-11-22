@@ -1,6 +1,6 @@
-# KI-Kompass RAG workshop
+# KI-Kompass RAG
 
-A retrieval-augmented generation (RAG) toolkit and a series of workshop notebooks built on it. The toolkit is general-purpose; the notebooks and the chat app apply it to one example company, PrimePack AG.
+A retrieval-augmented generation (RAG) toolkit and a series of notebooks built on it. The toolkit is general-purpose; the notebooks and the chat app apply it to one example company, PrimePack AG.
 
 ## Scenario
 
@@ -32,8 +32,6 @@ uv run jupyter lab
 
 Open `backend/notebooks/english/T01_baseline_rag.ipynb` and run the notebooks in order, each one top to bottom. `backend/notebooks/german/` has the same notebooks with German text; code, prompts and documents stay in English. The notebooks share one vector store, `backend/db/data_vs.db`, which is built from `data/` the first time it is needed.
 
-On Renku, start a session from the workshop link and open T01.
-
 | Notebook | Topic |
 |---|---|
 | `T01_baseline_rag` | The baseline RAG pipeline: chunk, embed, store, retrieve, generate |
@@ -56,9 +54,9 @@ On Renku, start a session from the workshop link and open T01.
 The chat app is a FastAPI backend (`ki_kompass_rag.main`, port 8080) and a Next.js frontend (port 3000). It needs Node.js and npm in addition to the setup above.
 
 ```bash
-make build-db                # once: builds backend/db/vs_text and backend/db/vs_image
-make run                     # backend on http://localhost:8080
-cd frontend && npm install && npm run dev   # second terminal; open http://localhost:3000
+make build-db  # once: builds backend/db/vs_text and backend/db/vs_image
+make run  # backend on http://localhost:8080
+cd frontend && npm install && npm run dev  # second terminal; open http://localhost:3000
 ```
 
 `make build-db` embeds image chunks with Qwen3-VL (a 2B-parameter model, slow on CPU). To build only the text store, run `uv run python -m ki_kompass_rag.build_app_db --skip-images`. The backend loads Qwen3-VL at startup either way, so the first start downloads the model.
@@ -94,7 +92,6 @@ The artificial documents contain deliberate flaws that test whether the assistan
 | `ART_relicyc_logypal1_datasheet_2021.pdf` | Superseded datasheet | Conflict: its 2021 GWP figure differs from the 2023 verified EPD |
 | `ART_response_inquiry_frische_felder.md` | Customer correspondence | CSRD request with open action items |
 
-For the LogyLight pallet and PFAS declarations, the correct answer is that the data is missing. Products outside the catalog, such as the "Lara Pallet", should be reported as not in the portfolio. `data/EVALUATION_qa_ground_truth.md` lists test questions with expected answers and sources.
 
 EPDs (`EPD_{category}_{supplier}_{product}.pdf`):
 
@@ -157,18 +154,13 @@ Package details: [backend/README.md](backend/README.md), [conversational-toolkit
 ## Development
 
 ```bash
-uv run pre-commit install    # ruff, mypy, nbstripout and file checks on every commit
-make test                    # uv run pytest -q
-make lint                    # ruff check, ruff format --check, mypy
+uv run pre-commit install  # ruff, mypy, nbstripout and file checks on every commit
+make test  # uv run pytest -q
+make lint  # ruff check, ruff format --check, mypy
 ```
 
 CI (`.github/workflows/tests.yml`) runs ruff and pytest on Python 3.12 and 3.13. Pre-commit strips notebook outputs. Use branch prefixes `feature/`, `fix/`, `docs/` or `data/`. When you add a document to `data/`, follow the prefix convention and add it to the tables above.
 
-The Postgres vector store and conversation database need an optional extra: `uv sync --all-packages --extra postgres`. A later plain `uv sync` removes it again.
-
-## Organisers
-
-To run the workshop on Renku, follow [docs/renku_workshop_setup.md](docs/renku_workshop_setup.md).
 
 ## License
 
