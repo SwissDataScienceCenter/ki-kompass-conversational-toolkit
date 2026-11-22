@@ -87,7 +87,9 @@ class PDFChunker(Chunker):
             if with_images and isinstance(element, PictureItem) and element.image and element.image.pil_image
         ]
         stem = Path(file_path).stem
-        return document.export_to_markdown(), [(f"{stem}-picture-{i}.png", p) for i, p in enumerate(pictures, 1)]
+        return document.export_to_markdown(compact_tables=True), [
+            (f"{stem}-picture-{i}.png", p) for i, p in enumerate(pictures, 1)
+        ]
 
     def to_markdown(self, file_path: str, engine: MarkdownConverterEngine = MarkdownConverterEngine.DOCLING) -> str:
         """Convert a document to markdown without extracting pictures."""

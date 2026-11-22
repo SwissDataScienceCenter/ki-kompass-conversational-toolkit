@@ -140,3 +140,18 @@ def test_vector_store_records_its_embedding_model(tmp_path):
     assert baseline_rag.store_embedding_model(reopened) == "fake-model"
     assert reopened.space == "cosine"
     assert store.collection.count() == 1
+
+
+def test_split_text_packs_paragraphs_and_repeats_table_header():
+    paragraphs = "\n\n".join(["a" * 40] * 5)
+    assert baseline_rag.split_text(paragraphs, max_chars=100) == [
+        f"{'a' * 40}\n\n{'a' * 40}",
+        f"{'a' * 40}\n\n{'a' * 40}",
+        "a" * 40,
+    ]
+
+    table = "\n".join(["| h |", "| - |", *[f"| {i:02} |" for i in range(6)]])
+    pieces = baseline_rag.split_text(table, max_chars=30)
+    assert all(p.startswith("| h |\n| - |\n") for p in pieces)
+    assert sum(p.count("\n") - 1 for p in pieces) == 6
+    assert baseline_rag.split_text("short") == ["short"]

@@ -36,6 +36,8 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
 RETRIEVER_TOP_K = 5
 SEED = 42
 MAX_FILE_SIZE_MB = 20
+# Longer sections are split: they would exceed the embedding limit and flood the LLM's context.
+MAX_CHUNK_CHARS = 4000
 
 SYSTEM_PROMPT = (
     "You are a helpful AI assistant specialised in sustainability and product compliance for PrimePack AG.\n\n"
@@ -97,6 +99,36 @@ def build_llm(
     return llm
 
 
+def _pack(parts: list[str], sep: str, max_chars: int, prefix: str = "") -> list[str]:
+    """Greedily join parts with sep into pieces of at most max_chars (a longer part stays whole)."""
+    pieces: list[str] = []
+    current = ""
+    for part in parts:
+        candidate = f"{current}{sep}{part}" if current else prefix + part
+        if current and len(candidate) > max_chars:
+            pieces.append(current)
+            candidate = prefix + part
+        current = candidate
+    return [*pieces, current] if current else pieces
+
+
+def split_text(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
+    """Split text at paragraph breaks, then long paragraphs at line breaks; tables keep their header row."""
+    blocks: list[str] = []
+    for block in text.split("\n\n"):
+        if len(block) <= max_chars:
+            blocks.append(block)
+            continue
+        lines = block.split("\n")
+        is_table = lines[0].lstrip().startswith("|") and len(lines) > 2
+        if is_table:
+            header = "\n".join(lines[:2]) + "\n"
+            blocks += _pack(lines[2:], "\n", max_chars, prefix=header)
+        else:
+            blocks += _pack(lines, "\n", max_chars)
+    return _pack(blocks, "\n\n", max_chars)
+
+
 def load_chunks(max_files: int | None = None, with_images: bool = False) -> list[Chunk]:
     """Chunk the supported files in DATA_DIR (EVALUATION* excluded); text only unless with_images."""
     files = []
@@ -123,14 +155,26 @@ def load_chunks(max_files: int | None = None, with_images: bool = False) -> list
         except Exception as exc:
             logger.warning(f"Skipping {f.name}: {exc}")
             continue
-        for chunk in file_chunks:
+        split_chunks = [
+            chunk.model_copy(
+                update={"content": piece, "metadata": dict(chunk.metadata)}
+            )
+            for chunk in file_chunks
+            for piece in (
+                split_text(chunk.content)
+                if chunk.mime_type.startswith("text/")
+                else [chunk.content]
+            )
+        ]
+        for i, chunk in enumerate(split_chunks):
             # "source" and "title" are what the frontend displays.
             chunk.metadata |= {
                 "source_file": f.name,
                 "source": f.name,
                 "title": chunk.title,
+                "chunk_index": i,
             }
-        chunks.extend(file_chunks)
+        chunks.extend(split_chunks)
 
     logger.info(f"Done, {len(chunks)} chunks total")
     return chunks
