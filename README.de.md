@@ -2,7 +2,7 @@
 
 [English version](README.md)
 
-Ein Toolkit für Retrieval-Augmented Generation (RAG) und eine Reihe von Notebooks, die darauf aufbauen. Das Toolkit ist allgemein einsetzbar; die Notebooks und die Chat-App wenden es auf ein Beispielunternehmen an, die PrimePack AG.
+Ein Toolkit für Retrieval-Augmented Generation (RAG) und eine Reihe von Notebooks, die darauf aufbauen. Das Toolkit ist an keinen bestimmten Anwendungsfall gebunden; die Notebooks und die Chat-App zeigen es am Beispiel der fiktiven Firma PrimePack AG.
 
 ## Szenario
 
